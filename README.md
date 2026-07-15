@@ -18,8 +18,15 @@ receipt-intelligence-api/
 ├── AGENTS.md              # Cursor agent workflow — start here
 ├── .cursor/               # Agents, commands, rules
 ├── .env.example           # Local config template
-├── docs/                  # Analytics and Q&A docs *(#3, #7, #9+)*
-└── app/                   # FastAPI application *(#2+)*
+├── app/                   # FastAPI application
+│   ├── main.py            # Entrypoint and routes
+│   ├── config.py          # RECEIPT_DATA_PATH
+│   ├── models.py          # Categorized receipt schemas
+│   └── loader.py          # Read and flatten receipt JSON
+├── requirements.txt       # Python dependencies
+├── pytest.ini             # pytest config
+├── tests/                 # pytest (loader smoke tests)
+└── docs/                  # Analytics and Q&A docs *(#3, #7, #9+)*
 ```
 
 ## Prerequisites
@@ -43,14 +50,24 @@ receipt-intelligence-api/
 
 ### Local run
 
-*Coming in #2 — FastAPI scaffold.*
-
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env   # optional — default points at sibling n8n receipts
 uvicorn app.main:app --reload
-curl http://localhost:8000/health
+```
+
+In another terminal:
+
+```bash
+curl http://localhost:8000/health   # {"status":"ok"}
+```
+
+Run tests:
+
+```bash
+pytest
 ```
 
 ## Agent workflow
@@ -63,8 +80,8 @@ One issue, one branch, one PR. Orchestrator runs `/verify` before opening a PR; 
 
 | Issue | Focus |
 |-------|-------|
-| #1 | Cursor bootstrap *(this issue)* |
-| #2 | FastAPI scaffold + receipt loader |
+| #1 | Cursor bootstrap |
+| #2 | FastAPI scaffold + receipt loader *(this issue)* |
 | #3–#6 | Schemas, aggregation, summaries, REST API |
 | #7 | Analytics documentation |
 | #8–#11 | Q&A endpoint, routing, insights, test matrix |
