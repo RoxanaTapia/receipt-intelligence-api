@@ -26,8 +26,9 @@ Agents use generic language; this table maps terms to **this repo**. Cross-repo 
 
 ## Current Focus
 
-- **Active issue:** #2 — FastAPI scaffold + receipt loader
-- **Module 4 roadmap:** schemas (#3), aggregation (#4–#6), Q&A (#8–#11)
+- **Active issue:** #3 — analytics query schemas and time-range contract
+- **Module 4 roadmap:** aggregation (#4–#6), Q&A (#8–#11)
+- **Loader (#2):** complete via PR #13
 - **Bootstrap (#1):** complete via PR #12
 
 ## Core Principles
