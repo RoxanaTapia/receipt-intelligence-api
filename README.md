@@ -24,6 +24,7 @@ receipt-intelligence-api/
 │   ├── models.py          # Categorized receipt schemas
 │   └── loader.py          # Read and flatten receipt JSON
 ├── requirements.txt       # Python dependencies
+├── pytest.ini             # pytest config
 ├── tests/                 # pytest (loader smoke tests)
 └── docs/                  # Analytics and Q&A docs *(#3, #7, #9+)*
 ```
@@ -50,7 +51,7 @@ receipt-intelligence-api/
 ### Local run
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # optional — default points at sibling n8n receipts
