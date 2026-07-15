@@ -26,8 +26,9 @@ Agents use generic language; this table maps terms to **this repo**. Cross-repo 
 
 ## Current Focus
 
-- **Module 4:** Analytics & Question Answering — loader (#2), schemas (#3), aggregation (#4–#6), Q&A (#8–#11)
-- **Bootstrap:** Cursor agent setup (#1) — this issue
+- **Active issue:** #2 — FastAPI scaffold + receipt loader
+- **Module 4 roadmap:** schemas (#3), aggregation (#4–#6), Q&A (#8–#11)
+- **Bootstrap (#1):** complete via PR #12
 
 ## Core Principles
 
