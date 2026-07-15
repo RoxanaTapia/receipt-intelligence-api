@@ -64,6 +64,9 @@ Follow **`/document`** when **any** of:
 
 - The issue designs or implements FastAPI routes, services, or middleware
 - The issue changes API request/response models or OpenAPI schema
+- The issue implements or changes the receipt **loader** (`RECEIPT_DATA_PATH`)
+- The issue adds or changes files under `app/`
+- The issue adds or changes **pytest** tests or fixtures for the API
 - The issue lists human checkpoints for local API verification
 
 ### claude-prompt-engineer triggers

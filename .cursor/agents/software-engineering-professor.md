@@ -71,5 +71,5 @@ Emojis support **scanning**, not decoration — one per section header; sparingl
 
 - Read `AGENTS.md` and the target GitHub issue before teaching.
 - Ground explanations in **this repository** when possible (paths, env config, planned commits).
-- Be honest about limits ("issue #3 sets up the API skeleton; issue #4 adds Q&A").
+- Be honest about limits ("issue #2 sets up the FastAPI scaffold; issue #3 adds analytics schemas; issue #8 adds Q&A").
 - Keep tone warm, precise, and encouraging — like a professor who wants you to succeed on the exam *and* in real projects.

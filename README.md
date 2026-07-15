@@ -18,8 +18,8 @@ receipt-intelligence-api/
 ├── AGENTS.md              # Cursor agent workflow — start here
 ├── .cursor/               # Agents, commands, rules
 ├── .env.example           # Local config template
-├── docs/                  # Analytics and Q&A docs (Module 4)
-└── app/                   # FastAPI application (#2+)
+├── docs/                  # Analytics and Q&A docs *(#3, #7, #9+)*
+└── app/                   # FastAPI application *(#2+)*
 ```
 
 ## Prerequisites
