@@ -69,7 +69,7 @@ Every aggregation response exposes:
 
 | Unit | Field | Meaning |
 |------|-------|---------|
-| Total spend | `total_spend` | Sum of line-item `price × quantity` (or equivalent) over included receipts |
+| Total spend | `total_spend` | Sum of included line-item `price` values (each `price` is the line total, matching upstream extraction) |
 | Spend by category | `by_category[]` | Per-category `total_spend` and `line_item_count` |
 | Line-item count | `line_item_count` | Number of line items included |
 | Receipt count | `receipt_count` | Number of **deduplicated** logical receipts included |
@@ -102,7 +102,7 @@ Resolved `start_date` / `end_date` on the response always reflect the effective 
 
 n8n may keep **multiple hash-named files** for one shopping trip when extraction or
 categories drift across re-runs (see
-[data/README.md — Re-runs and multiple files](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/README.md)).
+[n8n data/README.md — Re-runs and multiple files](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/README.md)).
 The loader (#2) reads every valid file; analytics must collapse duplicates or totals
 **double-count**.
 

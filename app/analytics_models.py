@@ -101,7 +101,7 @@ class AggregationResponse(BaseModel):
     end_date: date = Field(description="Resolved inclusive range end (transaction dates)")
     categories: list[Category] | None = Field(
         default=None,
-        description="Categories included; None means all",
+        description="Categories included; None or empty means all",
     )
     total_spend: float
     receipt_count: int = Field(ge=0)
