@@ -22,11 +22,14 @@ receipt-intelligence-api/
 │   ├── main.py            # Entrypoint and routes
 │   ├── config.py          # RECEIPT_DATA_PATH
 │   ├── models.py          # Categorized receipt schemas
+│   ├── analytics_models.py # Analytics query/response contract (#3)
 │   └── loader.py          # Read and flatten receipt JSON
 ├── requirements.txt       # Python dependencies
 ├── pytest.ini             # pytest config
-├── tests/                 # pytest (loader smoke tests)
-└── docs/                  # Analytics and Q&A docs *(#3, #7, #9+)*
+├── tests/                 # pytest
+└── docs/                  # Analytics and Q&A docs
+    ├── analytics-schema.md  # Time ranges, filters, dedup (#3)
+    └── analytics.md         # Guide stub → fuller in #7
 ```
 
 ## Prerequisites
@@ -70,6 +73,14 @@ Run tests:
 pytest
 ```
 
+## Documentation
+
+| Doc | Contents |
+|-----|----------|
+| [docs/analytics-schema.md](docs/analytics-schema.md) | Analytics contract: time ranges, filters, response shapes, dedup |
+| [docs/analytics.md](docs/analytics.md) | Analytics guide stub (expanded in #7) |
+| [AGENTS.md](AGENTS.md) | Cursor agent workflow |
+
 ## Agent workflow
 
 One issue, one branch, one PR. Orchestrator runs `/verify` before opening a PR; you approve before merge.
@@ -81,7 +92,8 @@ One issue, one branch, one PR. Orchestrator runs `/verify` before opening a PR; 
 | Issue | Focus |
 |-------|-------|
 | #1 | Cursor bootstrap |
-| #2 | FastAPI scaffold + receipt loader *(this issue)* |
-| #3–#6 | Schemas, aggregation, summaries, REST API |
+| #2 | FastAPI scaffold + receipt loader |
+| #3 | Analytics query schemas and time-range contract |
+| #4–#6 | Aggregation, summaries, REST API |
 | #7 | Analytics documentation |
 | #8–#11 | Q&A endpoint, routing, insights, test matrix |
