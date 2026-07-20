@@ -16,6 +16,8 @@ REST (#6), and Q&A (#8–#11). Pydantic mirrors live in
 |-------|-------|----------------|
 | Aggregation + dedup | #4 | [`app/aggregation.py`](../app/aggregation.py) |
 | Structured summaries | #5 | [`app/summary.py`](../app/summary.py) |
+| REST endpoints | #6 | [`app/routers/analytics.py`](../app/routers/analytics.py) |
+| Receipt coverage | #6 | [`app/coverage.py`](../app/coverage.py) |
 
 ```mermaid
 flowchart LR
@@ -23,6 +25,7 @@ flowchart LR
   A --> S[SummaryResponse]
   S --> R[REST #6]
   S --> QA[Q&A #8–#11]
+  C[ReceiptCoverageResponse] --> R
 ```
 
 ## Contents
@@ -33,8 +36,10 @@ flowchart LR
 4. [Aggregation](#aggregation)
 5. [Receipt deduplication](#receipt-deduplication-policy)
 6. [Structured summaries](#structured-summaries)
-7. [Pydantic mapping](#pydantic-mapping)
-8. [Related docs](#related-docs)
+7. [REST query parameters](#rest-query-parameters)
+8. [Receipt coverage](#receipt-coverage)
+9. [Pydantic mapping](#pydantic-mapping)
+10. [Related docs](#related-docs)
 
 ## Date semantics
 
@@ -255,6 +260,64 @@ Template patterns (filled into `SummaryFact.text`):
 }
 ```
 
+## REST query parameters
+
+`GET /analytics/spending` and `GET /analytics/summary` accept flat query params that
+map to [`AnalyticsQuery`](../app/analytics_models.py) (see
+[`build_analytics_query`](../app/routers/analytics.py)):
+
+| Query param | Maps to | Notes |
+|-------------|---------|-------|
+| `preset` | `time_range.preset` | `last_week`, `last_month`, or `last_N_days` |
+| `n_days` | `time_range.n_days` | Required when `preset=last_N_days` (`≥ 1`) |
+| `start_date` | `time_range.start_date` | With `end_date` for explicit mode (`YYYY-MM-DD`) |
+| `end_date` | `time_range.end_date` | Inclusive |
+| `categories` | `categories` | Repeatable; omit for all taxonomy values |
+
+Exactly one time-range mode applies (same rules as [Time ranges](#time-ranges)).
+Invalid combinations or unknown categories → **422** with a `detail` message.
+
+Empty periods (no receipts in range) → **200** with `total_spend: 0`, empty
+`by_category`, and `receipt_count: 0` (not an error — see
+[Zero-total percentages](#zero-total-percentages)).
+
+Live OpenAPI: `GET /docs` when the API is running.
+
+## Receipt coverage
+
+`GET /analytics/receipts` returns load + dedup observability (no time filter).
+
+### Coverage response shape
+
+```json
+{
+  "data_path": "../receipt-intelligence-n8n/data/receipts",
+  "data_path_exists": true,
+  "files_loaded": 4,
+  "logical_receipt_count": 3,
+  "line_item_count": 7,
+  "earliest_date": "2026-05-10",
+  "latest_date": "2026-05-19",
+  "loaded_files": [
+    "2026-05-10_aldi_aaaaaaaa.json",
+    "2026-05-15_rewe_aaaaaaaa.json",
+    "2026-05-15_rewe_bbbbbbbb.json",
+    "2026-05-19_rewe_cccccccc.json"
+  ],
+  "deduplication": {
+    "deduplicated_count": 1,
+    "superseded_files": ["2026-05-15_rewe_aaaaaaaa.json"]
+  }
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `files_loaded` | Valid JSON files read before dedup |
+| `logical_receipt_count` | Winners after dedup |
+| `earliest_date` / `latest_date` | Transaction-date span of logical receipts (`null` if none) |
+| `deduplication` | Same metadata as aggregation |
+
 ## Pydantic mapping
 
 | Concept | Model (`app/analytics_models.py`) |
@@ -268,11 +331,14 @@ Template patterns (filled into `SummaryFact.text`):
 | Summary fact | `SummaryFact` |
 | Period delta | `PeriodDelta` |
 | Summary result | `SummaryResponse` |
+| Receipt coverage | `ReceiptCoverageResponse` |
 
 | Service | Module |
 |---------|--------|
 | Aggregation | [`app/aggregation.py`](../app/aggregation.py) |
 | Summaries | [`app/summary.py`](../app/summary.py) |
+| Coverage | [`app/coverage.py`](../app/coverage.py) |
+| REST routes | [`app/routers/analytics.py`](../app/routers/analytics.py) |
 
 Receipt / line-item persistence shapes remain in [`app/models.py`](../app/models.py).
 
@@ -280,5 +346,5 @@ Receipt / line-item persistence shapes remain in [`app/models.py`](../app/models
 
 | Doc | Owner |
 |-----|--------|
-| [analytics.md](analytics.md) | Stub now; fuller guide in **#7** |
-| This schema | **#3** (base contract); **#4** aggregation/dedup; **#5** summaries |
+| [analytics.md](analytics.md) | Interim curl notes (#6); fuller guide in **#7** |
+| This schema | **#3** (base contract); **#4** aggregation/dedup; **#5** summaries; **#6** REST/coverage |

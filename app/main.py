@@ -2,7 +2,17 @@
 
 from fastapi import FastAPI
 
-app = FastAPI(title="Receipt Intelligence API")
+from app.routers import analytics
+
+app = FastAPI(
+    title="Receipt Intelligence API",
+    description=(
+        "Spending analytics over categorized receipt JSON. "
+        "Response shapes: docs/analytics-schema.md."
+    ),
+)
+
+app.include_router(analytics.router)
 
 
 @app.get("/health")
