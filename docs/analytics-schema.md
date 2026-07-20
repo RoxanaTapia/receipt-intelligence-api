@@ -1,20 +1,40 @@
 # Analytics schema
 
 Module 4 **data contract** for spending analytics: time ranges, category filters,
-aggregation response shapes, and receipt deduplication.
+aggregation, deduplication, and structured summaries.
 
 📌 **Source of truth** for shapes shared by aggregation (#4), summaries (#5),
 REST (#6), and Q&A (#8–#11). Pydantic mirrors live in
 [`app/analytics_models.py`](../app/analytics_models.py).
 
-Upstream category taxonomy:
-[n8n categorization-schema.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization-schema.md).
+| Upstream | Link |
+|----------|------|
+| Category taxonomy | [n8n categorization-schema.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization-schema.md) |
+| Receipt files on disk | [n8n data/README.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/README.md) |
 
-How duplicate hash files appear on disk:
-[n8n data/README.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/README.md).
+| Layer | Issue | Implementation |
+|-------|-------|----------------|
+| Aggregation + dedup | #4 | [`app/aggregation.py`](../app/aggregation.py) |
+| Structured summaries | #5 | [`app/summary.py`](../app/summary.py) |
 
-⚠️ Aggregation and dedup are implemented in **#4** (`app/aggregation.py`).
-Structured summaries are implemented in **#5** (`app/summary.py`).
+```mermaid
+flowchart LR
+  Q[AnalyticsQuery] --> A[AggregationResponse]
+  A --> S[SummaryResponse]
+  S --> R[REST #6]
+  S --> QA[Q&A #8–#11]
+```
+
+## Contents
+
+1. [Date semantics](#date-semantics)
+2. [Time ranges](#time-ranges)
+3. [Category filters](#category-filters)
+4. [Aggregation](#aggregation)
+5. [Receipt deduplication](#receipt-deduplication-policy)
+6. [Structured summaries](#structured-summaries)
+7. [Pydantic mapping](#pydantic-mapping)
+8. [Related docs](#related-docs)
 
 ## Date semantics
 
@@ -63,7 +83,7 @@ Rolling windows (not calendar week/month boundaries) keep “last week” stable
 
 Categories come from the upstream taxonomy; unknown strings fail validation.
 
-## Aggregation units
+## Aggregation
 
 Every aggregation response exposes:
 
@@ -77,7 +97,7 @@ Every aggregation response exposes:
 Resolved `start_date` / `end_date` on the response always reflect the effective window
 (after preset resolution).
 
-### Response shape
+### Aggregation response shape
 
 ```json
 {
@@ -134,16 +154,20 @@ Two files, same shopping trip, categories changed on re-run:
 - **Metadata:** `deduplicated_count: 1`, optional
   `superseded_files: ["2026-05-15_rewe_aaaaaaaa.json"]`.
 
-## Structured summaries (#5)
+## Structured summaries
 
-Summaries sit **on top of** `AggregationResponse`. They add percentages, top-N
-categories, period labels, and template-filled `summary_facts[]` — still
-structured data, not Claude prose.
+Summaries turn an `AggregationResponse` into percentages, top-N categories, a
+period label, and template-filled `summary_facts[]`.
+
+⚠️ Still **structured data**, not Claude prose. Narration comes later in Q&A
+(#8–#11). Call `build_summary()` in [`app/summary.py`](../app/summary.py).
+
+### Summary fields
 
 | Field | Meaning |
 |-------|---------|
-| `period_label` | Human-readable window (`"last 7 days"`, `"March 2024"`, …) |
-| `by_category[]` | Aggregation rows plus `percentage` (0–100 share of `total_spend`) |
+| `period_label` | Human-readable window (see [Period labels](#period-labels)) |
+| `by_category[]` | Aggregation rows plus `percentage` (0–100 share of `total_spend`, one decimal) |
 | `top_categories[]` | Top-N by `total_spend` (default N = 3) |
 | `summary_facts[]` | Structured claims: `fact`, `value`, `unit`, `text` |
 | `period_delta` | Optional compare vs a previous `AggregationResponse` |
@@ -153,9 +177,9 @@ structured data, not Claude prose.
 When `total_spend == 0`, every category **percentage is `0`** (e.g. `0%` spent
 on a category). Do **not** return `null`, skip the fact, or divide by zero.
 
-⚠️ `0%` means share of a zero total (empty period or free items only) — not
-“the category was observed and cost nothing” unless `total_spend` and line items
-say so. Q&A should not over-interpret empty periods.
+⚠️ `0%` means share of a **zero total** (empty period or free items only). It does
+not by itself mean “we saw that category and it cost nothing.” Q&A should not
+over-interpret empty periods.
 
 The same rule applies to optional `period_delta.percent_change` when the
 previous period’s `total_spend` is `0`.
@@ -170,12 +194,20 @@ previous period’s `total_spend` is `0`.
 | Full calendar month (explicit) | e.g. `March 2024` |
 | Other explicit ranges | e.g. `10 May 2026 to 16 May 2026` |
 
-### Example summary facts
+### Summary fact keys
+
+| `fact` | `value` / `unit` | When present |
+|--------|------------------|--------------|
+| `category_share` | percentage / `%` | One per category in `by_category` |
+| `top_category` | category name / `null` | When `top_categories` is non-empty |
+| `period_delta_pct` | percent change / `%` | When a previous aggregation is supplied |
 
 Template patterns (filled into `SummaryFact.text`):
 
 - `"You spent {pct}% on {category} {period_label}."`
 - `"Your top category {period_label} was {category} ({amount} EUR)."`
+
+### Summary response shape
 
 ```json
 {
@@ -249,4 +281,4 @@ Receipt / line-item persistence shapes remain in [`app/models.py`](../app/models
 | Doc | Owner |
 |-----|--------|
 | [analytics.md](analytics.md) | Stub now; fuller guide in **#7** |
-| This schema | **#3** (contract); **#5** extends summaries |
+| This schema | **#3** (base contract); **#4** aggregation/dedup; **#5** summaries |
