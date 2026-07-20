@@ -1,7 +1,8 @@
 """Analytics query and response schemas — the Module 4 data contract (#3).
 
-Aggregation (#4) and REST/Q&A layers reuse these shapes so time ranges,
-filters, and dedup metadata stay consistent. See docs/analytics-schema.md.
+Aggregation (#4), summaries (#5), and REST/Q&A layers reuse these shapes so
+time ranges, filters, and dedup metadata stay consistent.
+See docs/analytics-schema.md.
 """
 
 from datetime import date
@@ -108,3 +109,44 @@ class AggregationResponse(BaseModel):
     line_item_count: int = Field(ge=0)
     by_category: list[CategorySpend]
     deduplication: DeduplicationMeta
+
+
+class CategoryShare(BaseModel):
+    """Category spend plus share of the period total (0–100)."""
+
+    category: Category
+    total_spend: float
+    percentage: float = Field(ge=0, description="Share of total_spend; 0 when total is 0")
+    line_item_count: int = Field(ge=0)
+
+
+class SummaryFact(BaseModel):
+    """One structured, testable claim — facts before Claude narration (#5)."""
+
+    fact: str = Field(description="Stable key, e.g. category_share, top_category")
+    value: float | str
+    unit: str | None = Field(default=None, description="%, EUR, or null for labels")
+    text: str = Field(description="Template-filled human-readable string")
+
+
+class PeriodDelta(BaseModel):
+    """Optional compare of this period's total against a previous aggregation."""
+
+    previous_total_spend: float
+    absolute_change: float
+    percent_change: float = Field(
+        description="Relative change vs previous total; 0 when previous total is 0",
+    )
+
+
+class SummaryResponse(BaseModel):
+    """Human-readable summary facts derived from an AggregationResponse."""
+
+    start_date: date
+    end_date: date
+    period_label: str
+    total_spend: float
+    by_category: list[CategoryShare]
+    top_categories: list[CategoryShare]
+    summary_facts: list[SummaryFact]
+    period_delta: PeriodDelta | None = None
