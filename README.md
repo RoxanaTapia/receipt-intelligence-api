@@ -19,10 +19,14 @@ receipt-intelligence-api/
 ├── .cursor/               # Agents, commands, rules
 ├── .env.example           # Local config template
 ├── app/                   # FastAPI application
-│   ├── main.py            # Entrypoint and routes
+│   ├── main.py            # Entrypoint
+│   ├── routers/           # REST routes (analytics #6)
 │   ├── config.py          # RECEIPT_DATA_PATH
 │   ├── models.py          # Categorized receipt schemas
 │   ├── analytics_models.py # Analytics query/response contract (#3)
+│   ├── aggregation.py     # Spending aggregation + dedup (#4)
+│   ├── summary.py         # Structured summaries (#5)
+│   ├── coverage.py        # Receipt coverage metadata (#6)
 │   └── loader.py          # Read and flatten receipt JSON
 ├── requirements.txt       # Python dependencies
 ├── pytest.ini             # pytest config
@@ -65,7 +69,11 @@ In another terminal:
 
 ```bash
 curl http://localhost:8000/health   # {"status":"ok"}
+curl "http://localhost:8000/analytics/receipts"
+# OpenAPI UI: http://localhost:8000/docs
 ```
+
+More analytics `curl` examples: [docs/analytics.md](docs/analytics.md).
 
 Run tests:
 
