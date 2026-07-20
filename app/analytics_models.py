@@ -1,7 +1,7 @@
 """Analytics query and response schemas — the Module 4 data contract (#3).
 
-Aggregation (#4), summaries (#5), and REST/Q&A layers reuse these shapes so
-time ranges, filters, and dedup metadata stay consistent.
+Aggregation (#4), summaries (#5), REST (#6), and Q&A layers reuse these shapes
+so time ranges, filters, and dedup metadata stay consistent.
 See docs/analytics-schema.md.
 """
 
@@ -150,3 +150,29 @@ class SummaryResponse(BaseModel):
     top_categories: list[CategoryShare]
     summary_facts: list[SummaryFact]
     period_delta: PeriodDelta | None = None
+
+
+class ReceiptCoverageResponse(BaseModel):
+    """Debug view of loaded files, dedup winners, and covered transaction dates."""
+
+    data_path: str = Field(description="Resolved RECEIPT_DATA_PATH directory")
+    data_path_exists: bool
+    files_loaded: int = Field(ge=0, description="Valid JSON receipt files read from disk")
+    logical_receipt_count: int = Field(
+        ge=0,
+        description="Receipts remaining after deduplication",
+    )
+    line_item_count: int = Field(ge=0, description="Line items on logical (deduped) receipts")
+    earliest_date: date | None = Field(
+        default=None,
+        description="Earliest transaction date among logical receipts; null if none",
+    )
+    latest_date: date | None = Field(
+        default=None,
+        description="Latest transaction date among logical receipts; null if none",
+    )
+    loaded_files: list[str] = Field(
+        default_factory=list,
+        description="Filenames successfully loaded before dedup",
+    )
+    deduplication: DeduplicationMeta
