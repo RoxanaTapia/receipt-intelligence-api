@@ -13,8 +13,8 @@ Upstream category taxonomy:
 How duplicate hash files appear on disk:
 [n8n data/README.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/README.md).
 
-⚠️ This document defines the contract. **#4 implements** aggregation and dedup;
-this issue does not compute totals.
+⚠️ Aggregation and dedup are implemented in **#4** (`app/aggregation.py`).
+Structured summaries are implemented in **#5** (`app/summary.py`).
 
 ## Date semantics
 
@@ -134,6 +134,95 @@ Two files, same shopping trip, categories changed on re-run:
 - **Metadata:** `deduplicated_count: 1`, optional
   `superseded_files: ["2026-05-15_rewe_aaaaaaaa.json"]`.
 
+## Structured summaries (#5)
+
+Summaries sit **on top of** `AggregationResponse`. They add percentages, top-N
+categories, period labels, and template-filled `summary_facts[]` — still
+structured data, not Claude prose.
+
+| Field | Meaning |
+|-------|---------|
+| `period_label` | Human-readable window (`"last 7 days"`, `"March 2024"`, …) |
+| `by_category[]` | Aggregation rows plus `percentage` (0–100 share of `total_spend`) |
+| `top_categories[]` | Top-N by `total_spend` (default N = 3) |
+| `summary_facts[]` | Structured claims: `fact`, `value`, `unit`, `text` |
+| `period_delta` | Optional compare vs a previous `AggregationResponse` |
+
+### Zero-total percentages
+
+When `total_spend == 0`, every category **percentage is `0`** (e.g. `0%` spent
+on a category). Do **not** return `null`, skip the fact, or divide by zero.
+
+⚠️ `0%` means share of a zero total (empty period or free items only) — not
+“the category was observed and cost nothing” unless `total_spend` and line items
+say so. Q&A should not over-interpret empty periods.
+
+The same rule applies to optional `period_delta.percent_change` when the
+previous period’s `total_spend` is `0`.
+
+### Period labels
+
+| Input | `period_label` |
+|-------|----------------|
+| Preset `last_week` | `last 7 days` |
+| Preset `last_month` | `last 30 days` |
+| Preset `last_N_days` | `last {N} days` |
+| Full calendar month (explicit) | e.g. `March 2024` |
+| Other explicit ranges | e.g. `10 May 2026 to 16 May 2026` |
+
+### Example summary facts
+
+Template patterns (filled into `SummaryFact.text`):
+
+- `"You spent {pct}% on {category} {period_label}."`
+- `"Your top category {period_label} was {category} ({amount} EUR)."`
+
+```json
+{
+  "start_date": "2026-05-10",
+  "end_date": "2026-05-16",
+  "period_label": "last 7 days",
+  "total_spend": 24.5,
+  "by_category": [
+    {
+      "category": "food",
+      "total_spend": 18.0,
+      "percentage": 73.5,
+      "line_item_count": 3
+    },
+    {
+      "category": "drinks",
+      "total_spend": 6.5,
+      "percentage": 26.5,
+      "line_item_count": 1
+    }
+  ],
+  "top_categories": [
+    {
+      "category": "food",
+      "total_spend": 18.0,
+      "percentage": 73.5,
+      "line_item_count": 3
+    }
+  ],
+  "summary_facts": [
+    {
+      "fact": "category_share",
+      "value": 73.5,
+      "unit": "%",
+      "text": "You spent 73.5% on food last 7 days."
+    },
+    {
+      "fact": "top_category",
+      "value": "food",
+      "unit": null,
+      "text": "Your top category last 7 days was food (18.00 EUR)."
+    }
+  ],
+  "period_delta": null
+}
+```
+
 ## Pydantic mapping
 
 | Concept | Model (`app/analytics_models.py`) |
@@ -143,6 +232,15 @@ Two files, same shopping trip, categories changed on re-run:
 | Per-category row | `CategorySpend` |
 | Dedup metadata | `DeduplicationMeta` |
 | Aggregation result | `AggregationResponse` |
+| Category share | `CategoryShare` |
+| Summary fact | `SummaryFact` |
+| Period delta | `PeriodDelta` |
+| Summary result | `SummaryResponse` |
+
+| Service | Module |
+|---------|--------|
+| Aggregation | [`app/aggregation.py`](../app/aggregation.py) |
+| Summaries | [`app/summary.py`](../app/summary.py) |
 
 Receipt / line-item persistence shapes remain in [`app/models.py`](../app/models.py).
 
@@ -151,4 +249,4 @@ Receipt / line-item persistence shapes remain in [`app/models.py`](../app/models
 | Doc | Owner |
 |-----|--------|
 | [analytics.md](analytics.md) | Stub now; fuller guide in **#7** |
-| This schema | **#3** (this issue) |
+| This schema | **#3** (contract); **#5** extends summaries |
