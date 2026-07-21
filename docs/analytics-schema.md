@@ -347,4 +347,5 @@ Receipt / line-item persistence shapes remain in [`app/models.py`](../app/models
 | Doc | Owner |
 |-----|--------|
 | [analytics.md](analytics.md) | End-to-end guide: architecture, setup, curl, dedup ops (**#7**) |
+| [question-answering.md](question-answering.md) | Q&A routing contract, intent → `AnalyticsQuery` (**#9**; #11 completes) |
 | This schema | **#3** (base contract); **#4** aggregation/dedup; **#5** summaries; **#6** REST/coverage |
