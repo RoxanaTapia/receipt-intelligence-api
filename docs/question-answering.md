@@ -1,9 +1,12 @@
-# Question answering — routing contract
+# Question answering — routing and narration
 
 Design for mapping natural-language budget questions to analytics queries
 (**#9**) and narrating grounded answers (**#8** via `POST /questions`).
 Budget/diet insight heuristics ship in **#10**; the full test matrix and
 setup guide in **#11**.
+
+⚠️ Capstone README / curl examples for Q&A are owned by **#11** — this doc
+is the routing + narration contract only.
 
 📌 **Analytics contract:** [analytics-schema.md](analytics-schema.md)  
 📌 **Upstream taxonomy:** [n8n categorization-schema.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization-schema.md)  
