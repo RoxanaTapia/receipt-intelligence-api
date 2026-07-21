@@ -282,4 +282,4 @@ After the routing call:
 |-----|------|
 | [analytics-schema.md](analytics-schema.md) | Time ranges, categories, response shapes |
 | [analytics.md](analytics.md) | How aggregation/REST work today |
-| Sibling Claude standards | Cross-repo prompt conventions (Q&A routing section) |
+| [n8n-claude-standards.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/n8n-claude-standards.md) | Cross-repo Claude conventions (includes Q&A routing section) |
