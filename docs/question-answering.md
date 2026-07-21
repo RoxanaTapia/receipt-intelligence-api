@@ -1,9 +1,9 @@
 # Question answering — routing contract
 
 Design for mapping natural-language budget questions to analytics queries
-(**#9**). The HTTP endpoint and Claude *answer* narration ship in **#8**;
-budget/diet insight heuristics in **#10**; the full test matrix and setup
-guide in **#11**.
+(**#9**) and narrating grounded answers (**#8** via `POST /questions`).
+Budget/diet insight heuristics ship in **#10**; the full test matrix and
+setup guide in **#11**.
 
 📌 **Analytics contract:** [analytics-schema.md](analytics-schema.md)  
 📌 **Upstream taxonomy:** [n8n categorization-schema.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization-schema.md)  
@@ -13,8 +13,8 @@ guide in **#11**.
 
 | Consumer | How it uses this doc |
 |----------|----------------------|
-| **Prompt author / #8** | Copy the routing prompt and output schema into the API Claude call |
-| **Validator (#8)** | Encode intent enum + `AnalyticsQuery` fields in Pydantic after Claude responds |
+| **`app/qa_prompts.py`** | Distilled routing + narration prompts at runtime |
+| **`app/qa_service.py`** | Validate routed JSON → analytics → narrate |
 | **#11 test matrix** | Expected routing JSON for sample questions |
 
 Claude receives a **distilled prompt** at runtime — not this markdown file.
@@ -256,23 +256,61 @@ User question:
 | 5 | Budget / diet insight | `general_insight` | `categories: null` |
 | 6 | Synonym + explicit dates | `spending_by_category` | “soda” → `drinks` |
 
-## Parse → validate (for #8)
+## Parse → validate (#8)
 
-After the routing call:
+After the routing call (`app/qa_service.py`):
 
 | Step | Check |
 |------|-------|
 | Parse | Non-empty response; valid JSON object |
 | Validate | `intent` in allowed set (or error path); `time_range` / `categories` via `AnalyticsQuery` rules |
 | Fail closed | On `error` or validation failure → refuse; do not call aggregation with guessed filters |
+| No receipts | If coverage shows zero files/logical receipts → refuse without calling Claude |
+
+## Narration prompt (#8)
+
+After analytics facts are computed, a second Claude call turns them into prose.
+Amounts must come only from the facts JSON.
+
+### Production prompt
+
+Implemented in [`app/qa_prompts.py`](../app/qa_prompts.py) (`NARRATION_SYSTEM` +
+`build_narration_user_message`). Distilled form:
+
+```text
+## System
+You are a spending coach for the Receipt Intelligence System.
+Answer in clear, concise prose using ONLY the structured facts provided.
+Do not invent amounts, merchants, categories, or percentages that are not in the facts JSON.
+If the facts show zero spend or an empty period, say so honestly — do not guess.
+Do not mention JSON, prompts, or that you are an AI unless asked.
+
+## Task
+Write a short answer to the user question grounded only in the facts below.
+
+## User question
+{{QUESTION}}
+
+## Facts (JSON)
+{{FACTS_JSON}}
+
+## Output
+Plain-text answer only — no markdown fences, no extra JSON wrapper.
+```
+
+### Endpoint shape
+
+`POST /questions` with `{ "question": "..." }` returns
+`{ "answer", "facts", "query", "meta?" }`. Set `ANTHROPIC_API_KEY` (see
+[`.env.example`](../.env.example)).
 
 ## Related work
 
 | Issue | Delivers |
 |-------|----------|
-| ✅ #3–#6 | `AnalyticsQuery`, aggregation, summaries, REST |
-| **#9 (this)** | Routing contract, mappings, routing prompt |
-| #8 | `POST /questions`, narration prompt, Anthropic env |
+| ✅ #3–#7 | `AnalyticsQuery`, aggregation, summaries, REST, analytics docs |
+| ✅ #9 | Routing contract, mappings, routing prompt |
+| **#8 (this)** | `POST /questions`, narration prompt, Anthropic env |
 | #10 | Insight heuristics for `general_insight` |
 | #11 | Test matrix, full setup/`curl` guide, README link |
 
