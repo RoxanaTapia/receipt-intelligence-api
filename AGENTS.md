@@ -26,8 +26,9 @@ Agents use generic language; this table maps terms to **this repo**. Cross-repo 
 
 ## Current Focus
 
-- **Active issue:** #3 — analytics query schemas and time-range contract
-- **Module 4 roadmap:** aggregation (#4–#6), Q&A (#8–#11)
+- **Active issue:** #7 — analytics documentation capstone
+- **Module 4 roadmap:** Q&A (#8–#11)
+- **Analytics (#3–#6):** complete (schemas, aggregation, summaries, REST)
 - **Loader (#2):** complete via PR #13
 - **Bootstrap (#1):** complete via PR #12
 
