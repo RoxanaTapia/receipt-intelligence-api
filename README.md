@@ -33,7 +33,7 @@ receipt-intelligence-api/
 ├── tests/                 # pytest
 └── docs/                  # Analytics and Q&A docs
     ├── analytics-schema.md  # Time ranges, filters, dedup (#3)
-    └── analytics.md         # Guide stub → fuller in #7
+    └── analytics.md         # End-to-end analytics guide (#7)
 ```
 
 ## Prerequisites
@@ -85,8 +85,8 @@ pytest
 
 | Doc | Contents |
 |-----|----------|
+| [docs/analytics.md](docs/analytics.md) | End-to-end analytics guide: architecture, setup, API, dedup |
 | [docs/analytics-schema.md](docs/analytics-schema.md) | Analytics contract: time ranges, filters, response shapes, dedup |
-| [docs/analytics.md](docs/analytics.md) | Analytics guide stub (expanded in #7) |
 | [AGENTS.md](AGENTS.md) | Cursor agent workflow |
 
 ## Agent workflow
@@ -103,5 +103,5 @@ One issue, one branch, one PR. Orchestrator runs `/verify` before opening a PR; 
 | #2 | FastAPI scaffold + receipt loader |
 | #3 | Analytics query schemas and time-range contract |
 | #4–#6 | Aggregation, summaries, REST API |
-| #7 | Analytics documentation |
+| #7 | Analytics documentation (this guide + README links) |
 | #8–#11 | Q&A endpoint, routing, insights, test matrix |
