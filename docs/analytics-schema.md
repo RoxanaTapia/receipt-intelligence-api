@@ -3,28 +3,27 @@
 Module 4 **data contract** for spending analytics: time ranges, category filters,
 aggregation, deduplication, and structured summaries.
 
-📌 **Source of truth** for shapes shared by aggregation (#4), summaries (#5),
-REST (#6), and Q&A (#8–#11). Pydantic mirrors live in
-[`app/analytics_models.py`](../app/analytics_models.py).
+📌 **Source of truth** for shapes shared by aggregation, summaries, REST, and Q&A.
+Pydantic mirrors live in [`app/analytics_models.py`](../app/analytics_models.py).
 
 | Upstream | Link |
 |----------|------|
 | Category taxonomy | [n8n categorization-schema.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization-schema.md) |
 | Receipt files on disk | [n8n data/README.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/README.md) |
 
-| Layer | Issue | Implementation |
-|-------|-------|----------------|
-| Aggregation + dedup | #4 | [`app/aggregation.py`](../app/aggregation.py) |
-| Structured summaries | #5 | [`app/summary.py`](../app/summary.py) |
-| REST endpoints | #6 | [`app/routers/analytics.py`](../app/routers/analytics.py) |
-| Receipt coverage | #6 | [`app/coverage.py`](../app/coverage.py) |
+| Layer | Implementation |
+|-------|----------------|
+| Aggregation + dedup | [`app/aggregation.py`](../app/aggregation.py) |
+| Structured summaries | [`app/summary.py`](../app/summary.py) |
+| REST endpoints | [`app/routers/analytics.py`](../app/routers/analytics.py) |
+| Receipt coverage | [`app/coverage.py`](../app/coverage.py) |
 
 ```mermaid
 flowchart LR
   Q[AnalyticsQuery] --> A[AggregationResponse]
   A --> S[SummaryResponse]
-  S --> R[REST #6]
-  S --> QA[Q&A #8–#11]
+  S --> R[REST]
+  S --> QA[Q&A]
   C[ReceiptCoverageResponse] --> R
 ```
 
@@ -164,8 +163,8 @@ Two files, same shopping trip, categories changed on re-run:
 Summaries turn an `AggregationResponse` into percentages, top-N categories, a
 period label, and template-filled `summary_facts[]`.
 
-⚠️ Still **structured data**, not Claude prose. Narration comes later in Q&A
-(#8–#11). Call `build_summary()` in [`app/summary.py`](../app/summary.py).
+⚠️ Still **structured data**, not Claude prose. Narration comes later in Q&A.
+Call `build_summary()` in [`app/summary.py`](../app/summary.py).
 
 ### Summary fields
 
@@ -264,7 +263,7 @@ Template patterns (filled into `SummaryFact.text`):
 
 `GET /analytics/insights` (and `general_insight` on `POST /questions`) builds
 rule-based signals from a [`SummaryResponse`](#structured-summaries). Heuristics
-and thresholds: [question-answering.md](question-answering.md#budget-and-diet-insights-10).
+and thresholds: [question-answering.md](question-answering.md#budget-and-diet-insights).
 Code: [`app/insight_service.py`](../app/insight_service.py).
 
 ### Insight response shape
@@ -389,8 +388,9 @@ Receipt / line-item persistence shapes remain in [`app/models.py`](../app/models
 
 ## Related docs
 
-| Doc | Owner |
-|-----|--------|
-| [analytics.md](analytics.md) | End-to-end guide: architecture, setup, curl, dedup ops (**#7**) |
-| [question-answering.md](question-answering.md) | Q&A routing contract, intent → `AnalyticsQuery` (**#9**; #11 completes) |
-| This schema | **#3** (base contract); **#4** aggregation/dedup; **#5** summaries; **#6** REST/coverage |
+| Doc | Role |
+|-----|------|
+| [analytics.md](analytics.md) | End-to-end guide: architecture, setup, curl, dedup ops |
+| [question-answering.md](question-answering.md) | Q&A routing, narration, insights, test matrix |
+| [question-answering-test-matrix.md](question-answering-test-matrix.md) | Sample questions, expected routing, key facts |
+| This schema | Time ranges, filters, response shapes, dedup policy |

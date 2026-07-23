@@ -20,17 +20,17 @@ Agents use generic language; this table maps terms to **this repo**. Cross-repo 
 | Receipt data on disk | [n8n: data/README.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/README.md) |
 | Sample receipt JSON | [n8n: data/receipts/example.json](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/receipts/example.json) |
 | Claude prompt standards (Q&A) | [n8n: n8n-claude-standards.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/n8n-claude-standards.md) |
-| Analytics schemas | `docs/analytics-schema.md` *(#3)* |
-| Analytics guide | `docs/analytics.md` *(#7)* |
-| Q&A guide | `docs/question-answering.md` *(#8, #9, #10, #11)* |
+| Analytics schemas | `docs/analytics-schema.md` |
+| Analytics guide | `docs/analytics.md` |
+| Q&A guide | `docs/question-answering.md` |
+| Q&A test matrix | `docs/question-answering-test-matrix.md` |
 
 ## Current Focus
 
-- **Active issue:** #11 — Q&A test matrix and documentation (Module 4 capstone)
-- **Module 4 roadmap:** Q&A (#8–#11); endpoint (#8), routing (#9), insights (#10) complete
-- **Analytics (#3–#7):** complete (schemas, aggregation, summaries, REST, docs)
-- **Loader (#2):** complete via PR #13
-- **Bootstrap (#1):** complete via PR #12
+- **Module 4 (Q&A):** complete — endpoint, routing, insights, test matrix + docs
+- **Analytics:** complete — schemas, aggregation, summaries, REST, docs
+- **Loader / bootstrap:** complete
+- **Next:** no open issues in this repo — pick new work from the [Project board](https://github.com/users/RoxanaTapia/projects/3), or a docs/agentic hygiene chore
 
 ## Core Principles
 
@@ -45,7 +45,7 @@ Agents use generic language; this table maps terms to **this repo**. Cross-repo 
 |------|----------------|-------|
 | `milestone-orchestrator` | Coordinates shipping, branches, commits | Only agent allowed to commit |
 | `fastapi-engineer` | FastAPI routes, services, Pydantic models, loader | Primary implement specialist |
-| `claude-prompt-engineer` | Q&A and routing prompts (API-side Claude calls) | Consult for #9, #8, #10 |
+| `claude-prompt-engineer` | Q&A and routing prompts (API-side Claude calls) | Consult for routing / narration / insight prompts |
 | `docs-writer` | Documentation draft and review | `/document` |
 | `verifier` | Quality checks before PR | `/verify` |
 | `software-engineering-professor` | Teaches issues and concepts | `/lecture-on-issue` |
@@ -79,9 +79,10 @@ Agents use generic language; this table maps terms to **this repo**. Cross-repo 
 
 - Granular commits (ideally 1–4 per issue)
 - Only `milestone-orchestrator` creates commits
-- PR starts with a **Main contribution** paragraph
+- **PR titles must not include issue numbers** (avoid `(#11)`, `#11`, or `Closes #11` in the title). Put `Closes #NN` in the PR body.
+- PR body starts with a **Main contribution** paragraph
 - Human must approve before push or merge
 
 ## Notes for Cursor
 
-Read this file at the start of a new agent chat. Open **this repo** as the workspace root for Module 4 `/ship-issue`.
+Read this file at the start of a new agent chat. Open **this repo** as the workspace root for `/ship-issue`.

@@ -23,12 +23,12 @@ Claude receives a **distilled prompt** at runtime — not this markdown file.
 
 ```mermaid
 flowchart LR
-  Q["User question"] --> R["Routing prompt #9"]
+  Q["User question"] --> R["Routing prompt"]
   R --> J["Routed query JSON"]
   J --> V["Validate → AnalyticsQuery + intent"]
-  V --> A["Aggregation / summary #4–#5"]
-  A --> I["Insight heuristics #10"]
-  I --> N["Narration prompt #8"]
+  V --> A["Aggregation / summary"]
+  A --> I["Insight heuristics"]
+  I --> N["Narration prompt"]
   N --> Ans["Grounded answer"]
 ```
 
@@ -81,8 +81,8 @@ Analytics-only setup (no Anthropic key): [analytics.md — Local setup](analytic
 | Interpret NL → structured query | Claude (routing) | Fuzzy synonyms, intent, time phrases |
 | Validate JSON | Python / Pydantic | Fail closed on unknown categories or bad time modes |
 | Compute totals / shares | Analytics layer | Deterministic — never invent amounts |
-| Build budget/diet insights | Insight service (#10) | Rule-based; only for `general_insight` (and `GET /analytics/insights`) |
-| Narrate answer | Claude (#8) | Use only facts from analytics / insights |
+| Build budget/diet insights | Insight service | Rule-based; only for `general_insight` (and `GET /analytics/insights`) |
+| Narrate answer | Claude | Use only facts from analytics / insights |
 
 ⚠️ **Do not** use Claude to invent spend amounts. Routing may guess *intent and filters*; money comes only from aggregation/summary.
 
@@ -96,7 +96,7 @@ Exactly **one** intent per question.
 | `average_daily_spend` | Per-day average over the resolved window | Aggregation total ÷ inclusive day count |
 | `category_share` | Share / percent of spend by category | Summary: `by_category[].percentage`, share facts |
 | `period_comparison` | This period vs a previous period | Two aggregations + `period_delta` (see #5) |
-| `general_insight` | Broad “how am I doing?” / budget-diet style | Summary + structured insights (see [Budget and diet insights](#budget-and-diet-insights-10)) |
+| `general_insight` | Broad “how am I doing?” / budget-diet style | Summary + structured insights (see [Budget and diet insights](#budget-and-diet-insights)) |
 
 ### Routing rules (priority)
 
@@ -108,7 +108,7 @@ Exactly **one** intent per question.
 6. Otherwise → `spending_by_category` (default spend question).
 
 If the question is empty or not about spending, set `"intent": null` and
-`"error": "unsupported_question"` (validator rejects; #8 returns a refusal).
+`"error": "unsupported_question"` (validator rejects; the endpoint returns a refusal).
 
 ## Time-expression mapping
 
@@ -155,7 +155,7 @@ set `"error": "unknown_category"`.
 
 Routing Claude returns **one JSON object** (no markdown fences). Fields
 `time_range` and `categories` must match [`AnalyticsQuery`](../app/analytics_models.py)
-so #8 can validate with the same Pydantic models.
+so the Q&A service can validate with the same Pydantic models.
 
 ```json
 {
@@ -225,7 +225,7 @@ below are part of the task layer for ambiguous questions.
 
 ### Production prompt
 
-Copy into the #8 routing Claude call (substitute the user question):
+Copy into the routing Claude call (substitute the user question):
 
 ```text
 ## System
@@ -302,7 +302,7 @@ User question:
 | 5 | Budget / diet insight | `general_insight` | `categories: null` |
 | 6 | Synonym + explicit dates | `spending_by_category` | “soda” → `drinks` |
 
-## Parse → validate (#8)
+## Parse → validate
 
 After the routing call (`app/qa_service.py`):
 
@@ -313,7 +313,7 @@ After the routing call (`app/qa_service.py`):
 | Fail closed | On `error` or validation failure → refuse; do not call aggregation with guessed filters |
 | No receipts | If coverage shows zero files/logical receipts → refuse without calling Claude |
 
-## Narration prompt (#8)
+## Narration prompt
 
 After analytics facts are computed, a second Claude call turns them into prose.
 Amounts must come only from the facts JSON.
@@ -355,7 +355,7 @@ Plain-text answer only — no markdown fences, no extra JSON wrapper.
 For `general_insight`, `facts.insights` holds the structured insight list from
 [`generate_insights()`](../app/insight_service.py).
 
-## Budget and diet insights (#10)
+## Budget and diet insights
 
 Composite signals built from [`SummaryResponse`](analytics-schema.md#structured-summaries)
 shares — not Claude guesses. Lifestyle spending patterns only; **not** medical

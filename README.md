@@ -23,21 +23,21 @@ receipt-intelligence-api/
 │   ├── routers/           # REST routes (analytics + questions)
 │   ├── config.py          # RECEIPT_DATA_PATH, Anthropic settings
 │   ├── models.py          # Categorized receipt schemas
-│   ├── analytics_models.py # Analytics query/response contract (#3)
-│   ├── aggregation.py     # Spending aggregation + dedup (#4)
-│   ├── summary.py         # Structured summaries (#5)
-│   ├── coverage.py        # Receipt coverage metadata (#6)
-│   ├── insight_service.py # Budget/diet insight heuristics (#10)
-│   ├── qa_service.py      # Q&A pipeline (#8–#9)
+│   ├── analytics_models.py # Analytics query/response contract
+│   ├── aggregation.py     # Spending aggregation + dedup
+│   ├── summary.py         # Structured summaries
+│   ├── coverage.py        # Receipt coverage metadata
+│   ├── insight_service.py # Budget/diet insight heuristics
+│   ├── qa_service.py      # Q&A pipeline
 │   └── loader.py          # Read and flatten receipt JSON
 ├── requirements.txt       # Python dependencies
 ├── pytest.ini             # pytest config
 ├── tests/                 # pytest
 └── docs/                  # Analytics and Q&A docs
-    ├── analytics-schema.md              # Time ranges, filters, dedup (#3)
-    ├── analytics.md                     # End-to-end analytics guide (#7)
-    ├── question-answering.md            # Q&A pipeline, prompts, setup (#8–#11)
-    └── question-answering-test-matrix.md # Q&A scenarios + key facts (#11)
+    ├── analytics-schema.md              # Time ranges, filters, dedup
+    ├── analytics.md                     # End-to-end analytics guide
+    ├── question-answering.md            # Q&A pipeline, prompts, setup
+    └── question-answering-test-matrix.md # Q&A scenarios + key facts
 ```
 
 ## Prerequisites
@@ -102,13 +102,12 @@ One issue, one branch, one PR. Orchestrator runs `/verify` before opening a PR; 
 
 **Start here:** [AGENTS.md](AGENTS.md)
 
-## Roadmap (Module 4)
+## Shipped (Module 4)
 
-| Issue | Focus |
-|-------|-------|
-| #1 | Cursor bootstrap |
-| #2 | FastAPI scaffold + receipt loader |
-| #3 | Analytics query schemas and time-range contract |
-| #4–#6 | Aggregation, summaries, REST API |
-| #7 | Analytics documentation (this guide + README links) |
-| #8–#11 | Q&A endpoint, routing, insights, test matrix |
+Module 4 is complete. Historical scope:
+
+| Area | Focus |
+|------|-------|
+| Bootstrap + loader | Cursor workflow, FastAPI scaffold, receipt loader |
+| Analytics | Query schemas, aggregation, summaries, REST, docs |
+| Q&A | Endpoint, routing, insights, test matrix + docs |
