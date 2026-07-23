@@ -17,23 +17,27 @@ Receipts are **written** by [receipt-intelligence-n8n](https://github.com/Roxana
 receipt-intelligence-api/
 ├── AGENTS.md              # Cursor agent workflow — start here
 ├── .cursor/               # Agents, commands, rules
-├── .env.example           # Local config template
+├── .env.example           # Local config template (incl. ANTHROPIC_API_KEY)
 ├── app/                   # FastAPI application
 │   ├── main.py            # Entrypoint
-│   ├── routers/           # REST routes (analytics #6)
-│   ├── config.py          # RECEIPT_DATA_PATH
+│   ├── routers/           # REST routes (analytics + questions)
+│   ├── config.py          # RECEIPT_DATA_PATH, Anthropic settings
 │   ├── models.py          # Categorized receipt schemas
 │   ├── analytics_models.py # Analytics query/response contract (#3)
 │   ├── aggregation.py     # Spending aggregation + dedup (#4)
 │   ├── summary.py         # Structured summaries (#5)
 │   ├── coverage.py        # Receipt coverage metadata (#6)
+│   ├── insight_service.py # Budget/diet insight heuristics (#10)
+│   ├── qa_service.py      # Q&A pipeline (#8–#9)
 │   └── loader.py          # Read and flatten receipt JSON
 ├── requirements.txt       # Python dependencies
 ├── pytest.ini             # pytest config
 ├── tests/                 # pytest
 └── docs/                  # Analytics and Q&A docs
-    ├── analytics-schema.md  # Time ranges, filters, dedup (#3)
-    └── analytics.md         # End-to-end analytics guide (#7)
+    ├── analytics-schema.md              # Time ranges, filters, dedup (#3)
+    ├── analytics.md                     # End-to-end analytics guide (#7)
+    ├── question-answering.md            # Q&A pipeline, prompts, setup (#8–#11)
+    └── question-answering-test-matrix.md # Q&A scenarios + key facts (#11)
 ```
 
 ## Prerequisites
@@ -73,7 +77,8 @@ curl "http://localhost:8000/analytics/receipts"
 # OpenAPI UI: http://localhost:8000/docs
 ```
 
-More analytics `curl` examples: [docs/analytics.md](docs/analytics.md).
+More analytics `curl` examples: [docs/analytics.md](docs/analytics.md).  
+Q&A setup and `POST /questions` examples: [docs/question-answering.md](docs/question-answering.md).
 
 Run tests:
 
@@ -87,6 +92,8 @@ pytest
 |-----|----------|
 | [docs/analytics.md](docs/analytics.md) | End-to-end analytics guide: architecture, setup, API, dedup |
 | [docs/analytics-schema.md](docs/analytics-schema.md) | Analytics contract: time ranges, filters, response shapes, dedup |
+| [docs/question-answering.md](docs/question-answering.md) | Q&A pipeline: routing, narration, insights, setup, curl |
+| [docs/question-answering-test-matrix.md](docs/question-answering-test-matrix.md) | Q&A test matrix: sample questions, expected routing, key facts |
 | [AGENTS.md](AGENTS.md) | Cursor agent workflow |
 
 ## Agent workflow
