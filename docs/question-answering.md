@@ -1,14 +1,10 @@
-# Question answering — routing and narration
+# Question answering
 
-Design for mapping natural-language budget questions to analytics queries
-(**#9**), narrating grounded answers (**#8** via `POST /questions`), and
-budget/diet insight heuristics (**#10**). The full test matrix and setup
-guide ship in **#11**.
+End-to-end guide: natural-language budget questions → routing → analytics →
+Claude narration, plus budget/diet insight heuristics.
 
-⚠️ Capstone README / curl examples for Q&A are owned by **#11** — this doc
-is the routing, narration, and insight-threshold contract.
-
-📌 **Analytics contract:** [analytics-schema.md](analytics-schema.md)  
+📌 **Test matrix (scenarios + key facts):** [question-answering-test-matrix.md](question-answering-test-matrix.md)  
+📌 **Analytics contract:** [analytics-schema.md](analytics-schema.md) · [analytics.md](analytics.md)  
 📌 **Upstream taxonomy:** [n8n categorization-schema.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization-schema.md)  
 📌 **Prompt style:** [n8n-claude-standards.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/n8n-claude-standards.md)
 
@@ -16,13 +12,14 @@ is the routing, narration, and insight-threshold contract.
 
 | Consumer | How it uses this doc |
 |----------|----------------------|
+| **Operators** | Setup, env vars, example `curl` |
 | **`app/qa_prompts.py`** | Distilled routing + narration prompts at runtime |
 | **`app/qa_service.py`** | Validate routed JSON → analytics → narrate |
-| **#11 test matrix** | Expected routing JSON for sample questions |
+| **Test matrix** | Expected routing JSON and key facts for sample questions |
 
 Claude receives a **distilled prompt** at runtime — not this markdown file.
 
-## Pipeline (design)
+## Pipeline
 
 ```mermaid
 flowchart LR
@@ -34,6 +31,50 @@ flowchart LR
   I --> N["Narration prompt #8"]
   N --> Ans["Grounded answer"]
 ```
+
+`POST /questions` runs this flow in [`app/qa_service.py`](../app/qa_service.py).
+Insights run only for `general_insight` (same heuristics as `GET /analytics/insights`).
+
+## Setup and curl
+
+Prerequisites: Python 3.11+, categorized receipt JSON on disk (sibling n8n
+`data/receipts/` or [`tests/fixtures/aggregation/`](../tests/fixtures/aggregation/)),
+and an Anthropic API key for live Q&A.
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `RECEIPT_DATA_PATH` | No (has default) | Directory of categorized `*.json` — see [`.env.example`](../.env.example) |
+| `ANTHROPIC_API_KEY` | Yes for `POST /questions` | Routing + narration Claude calls |
+| `ANTHROPIC_MODEL` | No | Override default Haiku model id |
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # set ANTHROPIC_API_KEY; adjust RECEIPT_DATA_PATH if needed
+uvicorn app.main:app --reload
+```
+
+```bash
+# Health
+curl http://localhost:8000/health
+
+# Natural-language Q&A (requires ANTHROPIC_API_KEY)
+curl -s http://localhost:8000/questions \
+  -H "Content-Type: application/json" \
+  -d '{"question":"How much did I spend on healthy food last week?"}'
+
+# Insights without Claude (analytics only)
+curl "http://localhost:8000/analytics/insights?preset=last_week"
+```
+
+Response shape: `{ "answer", "facts", "query", "meta?" }`. On refusal
+(e.g. empty data), `facts` and `query` are null and `meta.refusal` holds a code.
+
+OpenAPI UI: `http://localhost:8000/docs`. Scenario checklist:
+[question-answering-test-matrix.md](question-answering-test-matrix.md).
+
+Analytics-only setup (no Anthropic key): [analytics.md — Local setup](analytics.md#local-setup-and-run).
 
 | Stage | Owner | Rule |
 |-------|-------|------|
@@ -310,9 +351,8 @@ Plain-text answer only — no markdown fences, no extra JSON wrapper.
 ### Endpoint shape
 
 `POST /questions` with `{ "question": "..." }` returns
-`{ "answer", "facts", "query", "meta?" }`. Set `ANTHROPIC_API_KEY` (see
-[`.env.example`](../.env.example)). For `general_insight`, `facts.insights`
-holds the structured insight list from
+`{ "answer", "facts", "query", "meta?" }` — see [Setup and curl](#setup-and-curl).
+For `general_insight`, `facts.insights` holds the structured insight list from
 [`generate_insights()`](../app/insight_service.py).
 
 ## Budget and diet insights (#10)
@@ -365,13 +405,14 @@ no spending for the period.
 | ✅ #3–#7 | `AnalyticsQuery`, aggregation, summaries, REST, analytics docs |
 | ✅ #9 | Routing contract, mappings, routing prompt |
 | ✅ #8 | `POST /questions`, narration prompt, Anthropic env |
-| **#10 (this)** | Insight heuristics, `GET /analytics/insights`, thresholds |
-| #11 | Test matrix, full setup/`curl` guide, README link |
+| ✅ #10 | Insight heuristics, `GET /analytics/insights`, thresholds |
+| ✅ #11 | Test matrix, setup/`curl` guide, README links |
 
 ## Related docs
 
 | Doc | Role |
 |-----|------|
+| [question-answering-test-matrix.md](question-answering-test-matrix.md) | Sample questions, expected routing, key facts |
 | [analytics-schema.md](analytics-schema.md) | Time ranges, categories, response shapes |
 | [analytics.md](analytics.md) | How aggregation/REST work today |
 | [n8n-claude-standards.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/n8n-claude-standards.md) | Cross-repo Claude conventions (includes Q&A routing section) |

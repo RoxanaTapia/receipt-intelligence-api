@@ -26,8 +26,8 @@ Agents use generic language; this table maps terms to **this repo**. Cross-repo 
 
 ## Current Focus
 
-- **Active issue:** #10 — budget and diet insight generation
-- **Module 4 roadmap:** Q&A (#8–#11); routing (#9) and Q&A endpoint (#8) complete
+- **Active issue:** #11 — Q&A test matrix and documentation (Module 4 capstone)
+- **Module 4 roadmap:** Q&A (#8–#11); endpoint (#8), routing (#9), insights (#10) complete
 - **Analytics (#3–#7):** complete (schemas, aggregation, summaries, REST, docs)
 - **Loader (#2):** complete via PR #13
 - **Bootstrap (#1):** complete via PR #12
