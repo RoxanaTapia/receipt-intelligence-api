@@ -260,11 +260,56 @@ Template patterns (filled into `SummaryFact.text`):
 }
 ```
 
+## Budget and diet insights
+
+`GET /analytics/insights` (and `general_insight` on `POST /questions`) builds
+rule-based signals from a [`SummaryResponse`](#structured-summaries). Heuristics
+and thresholds: [question-answering.md](question-answering.md#budget-and-diet-insights-10).
+Code: [`app/insight_service.py`](../app/insight_service.py).
+
+### Insight response shape
+
+```json
+{
+  "period_label": "last 7 days",
+  "total_spend": 100.0,
+  "insights": [
+    {
+      "insight_type": "snacks_share_of_grocery",
+      "severity": "ok",
+      "triggered": false,
+      "value": 10.0,
+      "threshold": 20.0,
+      "unit": "%",
+      "text": "Snacks were 10.0% of your grocery spend (food + snacks) last 7 days."
+    },
+    {
+      "insight_type": "top_spend_category",
+      "severity": "info",
+      "triggered": true,
+      "value": 70.0,
+      "threshold": null,
+      "unit": "%",
+      "text": "Your top category last 7 days was food at 70.0% of total spend (70.00 EUR)."
+    },
+    {
+      "insight_type": "high_discretionary_share",
+      "severity": "ok",
+      "triggered": false,
+      "value": 25.0,
+      "threshold": 40.0,
+      "unit": "%",
+      "text": "Snacks and drinks together were 25.0% of your total spend last 7 days."
+    }
+  ]
+}
+```
+
 ## REST query parameters
 
-`GET /analytics/spending` and `GET /analytics/summary` accept flat query params that
-map to [`AnalyticsQuery`](../app/analytics_models.py) (see
-[`build_analytics_query`](../app/routers/analytics.py)):
+`GET /analytics/spending`, `GET /analytics/summary`, and `GET /analytics/insights`
+accept flat query params that map to [`AnalyticsQuery`](../app/analytics_models.py)
+(see [`build_analytics_query`](../app/routers/analytics.py)):
 
 | Query param | Maps to | Notes |
 |-------------|---------|-------|

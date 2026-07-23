@@ -22,12 +22,12 @@ Agents use generic language; this table maps terms to **this repo**. Cross-repo 
 | Claude prompt standards (Q&A) | [n8n: n8n-claude-standards.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/n8n-claude-standards.md) |
 | Analytics schemas | `docs/analytics-schema.md` *(#3)* |
 | Analytics guide | `docs/analytics.md` *(#7)* |
-| Q&A guide | `docs/question-answering.md` *(#8, #9, #11)* |
+| Q&A guide | `docs/question-answering.md` *(#8, #9, #10, #11)* |
 
 ## Current Focus
 
-- **Active issue:** #8 — natural-language Q&A endpoint
-- **Module 4 roadmap:** Q&A (#8–#11); routing (#9) complete
+- **Active issue:** #10 — budget and diet insight generation
+- **Module 4 roadmap:** Q&A (#8–#11); routing (#9) and Q&A endpoint (#8) complete
 - **Analytics (#3–#7):** complete (schemas, aggregation, summaries, REST, docs)
 - **Loader (#2):** complete via PR #13
 - **Bootstrap (#1):** complete via PR #12

@@ -1,12 +1,12 @@
 # Question answering — routing and narration
 
 Design for mapping natural-language budget questions to analytics queries
-(**#9**) and narrating grounded answers (**#8** via `POST /questions`).
-Budget/diet insight heuristics ship in **#10**; the full test matrix and
-setup guide in **#11**.
+(**#9**), narrating grounded answers (**#8** via `POST /questions`), and
+budget/diet insight heuristics (**#10**). The full test matrix and setup
+guide ship in **#11**.
 
 ⚠️ Capstone README / curl examples for Q&A are owned by **#11** — this doc
-is the routing + narration contract only.
+is the routing, narration, and insight-threshold contract.
 
 📌 **Analytics contract:** [analytics-schema.md](analytics-schema.md)  
 📌 **Upstream taxonomy:** [n8n categorization-schema.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization-schema.md)  
@@ -30,7 +30,8 @@ flowchart LR
   R --> J["Routed query JSON"]
   J --> V["Validate → AnalyticsQuery + intent"]
   V --> A["Aggregation / summary #4–#5"]
-  A --> N["Narration prompt #8"]
+  A --> I["Insight heuristics #10"]
+  I --> N["Narration prompt #8"]
   N --> Ans["Grounded answer"]
 ```
 
@@ -39,7 +40,8 @@ flowchart LR
 | Interpret NL → structured query | Claude (routing) | Fuzzy synonyms, intent, time phrases |
 | Validate JSON | Python / Pydantic | Fail closed on unknown categories or bad time modes |
 | Compute totals / shares | Analytics layer | Deterministic — never invent amounts |
-| Narrate answer | Claude (#8) | Use only facts from analytics |
+| Build budget/diet insights | Insight service (#10) | Rule-based; only for `general_insight` (and `GET /analytics/insights`) |
+| Narrate answer | Claude (#8) | Use only facts from analytics / insights |
 
 ⚠️ **Do not** use Claude to invent spend amounts. Routing may guess *intent and filters*; money comes only from aggregation/summary.
 
@@ -53,7 +55,7 @@ Exactly **one** intent per question.
 | `average_daily_spend` | Per-day average over the resolved window | Aggregation total ÷ inclusive day count |
 | `category_share` | Share / percent of spend by category | Summary: `by_category[].percentage`, share facts |
 | `period_comparison` | This period vs a previous period | Two aggregations + `period_delta` (see #5) |
-| `general_insight` | Broad “how am I doing?” / budget-diet style | Structured insights (#10) grounded in summary facts |
+| `general_insight` | Broad “how am I doing?” / budget-diet style | Summary + structured insights (see [Budget and diet insights](#budget-and-diet-insights-10)) |
 
 ### Routing rules (priority)
 
@@ -286,10 +288,14 @@ You are a spending coach for the Receipt Intelligence System.
 Answer in clear, concise prose using ONLY the structured facts provided.
 Do not invent amounts, merchants, categories, or percentages that are not in the facts JSON.
 If the facts show zero spend or an empty period, say so honestly — do not guess.
+When facts include insights, treat them as spending-pattern observations only —
+do not make health or nutritional claims.
 Do not mention JSON, prompts, or that you are an AI unless asked.
 
 ## Task
 Write a short answer to the user question grounded only in the facts below.
+If the facts include an insights list, lead with those signals
+(use each insight's text; do not invent extra metrics).
 
 ## User question
 {{QUESTION}}
@@ -305,7 +311,52 @@ Plain-text answer only — no markdown fences, no extra JSON wrapper.
 
 `POST /questions` with `{ "question": "..." }` returns
 `{ "answer", "facts", "query", "meta?" }`. Set `ANTHROPIC_API_KEY` (see
-[`.env.example`](../.env.example)).
+[`.env.example`](../.env.example)). For `general_insight`, `facts.insights`
+holds the structured insight list from
+[`generate_insights()`](../app/insight_service.py).
+
+## Budget and diet insights (#10)
+
+Composite signals built from [`SummaryResponse`](analytics-schema.md#structured-summaries)
+shares — not Claude guesses. Lifestyle spending patterns only; **not** medical
+or nutritional advice.
+
+| Path | How insights are produced |
+|------|---------------------------|
+| `POST /questions` with `general_insight` | `_gather_facts` → `generate_insights(summary)` → `facts.insights` → narration |
+| `GET /analytics/insights` | Same heuristics; returns `InsightResponse` without Claude |
+
+Implementation: [`app/insight_service.py`](../app/insight_service.py),
+[`app/insight_models.py`](../app/insight_models.py).
+
+### Insight types
+
+| `insight_type` | Formula | Default threshold | Severity |
+|----------------|---------|-------------------|----------|
+| `snacks_share_of_grocery` | `snacks / (food + snacks) × 100` | **20%** — warning when above | `warning` / `ok` |
+| `top_spend_category` | Top category by `total_spend` (share of total) | none (informational) | `info` |
+| `high_discretionary_share` | `(snacks + drinks) / total × 100` | **40%** — warning when above | `warning` / `ok` |
+
+Constants: `SNACKS_SHARE_OF_GROCERY_WARN_PCT`, `HIGH_DISCRETIONARY_WARN_PCT`
+in [`app/insight_service.py`](../app/insight_service.py) (overridable as
+keyword args for tests).
+
+Zero totals: shares are `0`; no warning severities; `top_spend_category` reports
+no spending for the period.
+
+### Insight object shape
+
+```json
+{
+  "insight_type": "snacks_share_of_grocery",
+  "severity": "warning",
+  "triggered": true,
+  "value": 25.0,
+  "threshold": 20.0,
+  "unit": "%",
+  "text": "Snacks were 25.0% of your grocery spend (food + snacks) last 7 days. That's above the 20% guideline."
+}
+```
 
 ## Related work
 
@@ -313,8 +364,8 @@ Plain-text answer only — no markdown fences, no extra JSON wrapper.
 |-------|----------|
 | ✅ #3–#7 | `AnalyticsQuery`, aggregation, summaries, REST, analytics docs |
 | ✅ #9 | Routing contract, mappings, routing prompt |
-| **#8 (this)** | `POST /questions`, narration prompt, Anthropic env |
-| #10 | Insight heuristics for `general_insight` |
+| ✅ #8 | `POST /questions`, narration prompt, Anthropic env |
+| **#10 (this)** | Insight heuristics, `GET /analytics/insights`, thresholds |
 | #11 | Test matrix, full setup/`curl` guide, README link |
 
 ## Related docs
