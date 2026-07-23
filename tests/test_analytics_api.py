@@ -86,6 +86,25 @@ def test_summary_explicit_range_has_facts() -> None:
     assert any(fact["fact"] == "top_category" for fact in body["summary_facts"])
 
 
+def test_insights_explicit_range() -> None:
+    client = _client(AGG_FIXTURES)
+    response = client.get(
+        "/analytics/insights",
+        params={"start_date": "2026-05-01", "end_date": "2026-05-19"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_spend"] > 0
+    assert body["period_label"]
+    types = {item["insight_type"] for item in body["insights"]}
+    assert types == {
+        "snacks_share_of_grocery",
+        "top_spend_category",
+        "high_discretionary_share",
+    }
+
+
 def test_receipts_coverage_and_dedup() -> None:
     client = _client(AGG_FIXTURES)
     response = client.get("/analytics/receipts")
