@@ -23,6 +23,8 @@ from app.analytics_models import (
 )
 from app.config import get_receipt_data_path
 from app.coverage import receipt_coverage
+from app.insight_models import InsightResponse
+from app.insight_service import generate_insights
 from app.models import Category
 from app.summary import build_summary
 
@@ -78,6 +80,21 @@ def get_summary(
     """Structured summary facts derived from spending aggregation."""
     aggregation = aggregate_spending(query, data_path=data_path)
     return build_summary(aggregation, time_range=query.time_range)
+
+
+@router.get("/insights", response_model=InsightResponse)
+def get_insights(
+    query: AnalyticsQuery = Depends(build_analytics_query),
+    data_path: Path = Depends(get_data_path),
+) -> InsightResponse:
+    """Budget and diet insight signals for a time range (#10)."""
+    aggregation = aggregate_spending(query, data_path=data_path)
+    summary = build_summary(aggregation, time_range=query.time_range)
+    return InsightResponse(
+        period_label=summary.period_label,
+        total_spend=summary.total_spend,
+        insights=generate_insights(summary),
+    )
 
 
 @router.get("/receipts", response_model=ReceiptCoverageResponse)

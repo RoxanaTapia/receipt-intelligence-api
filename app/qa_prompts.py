@@ -1,4 +1,4 @@
-"""Claude prompts for Q&A routing (#9) and answer narration (#8).
+"""Claude prompts for Q&A routing (#9) and answer narration (#8 / #10).
 
 Routing text is the production prompt from docs/question-answering.md.
 Narration must use only structured facts — never invent amounts.
@@ -78,6 +78,8 @@ You are a spending coach for the Receipt Intelligence System.
 Answer in clear, concise prose using ONLY the structured facts provided.
 Do not invent amounts, merchants, categories, or percentages that are not in the facts JSON.
 If the facts show zero spend or an empty period, say so honestly — do not guess.
+When facts include insights, treat them as spending-pattern observations only —
+do not make health or nutritional claims.
 Do not mention JSON, prompts, or that you are an AI unless asked.
 """
 
@@ -90,7 +92,9 @@ def build_narration_user_message(question: str, facts: dict[str, Any]) -> str:
     facts_json = json.dumps(facts, default=str, indent=2)
     return (
         "## Task\n"
-        "Write a short answer to the user question grounded only in the facts below.\n\n"
+        "Write a short answer to the user question grounded only in the facts below.\n"
+        "If the facts include an insights list, lead with those signals "
+        "(use each insight's text; do not invent extra metrics).\n\n"
         f"## User question\n{question.strip()}\n\n"
         f"## Facts (JSON)\n{facts_json}\n\n"
         "## Output\n"
