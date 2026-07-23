@@ -1,6 +1,6 @@
 # Q&A test matrix
 
-Repeatable verification for Module 4 natural-language Q&A (#11).
+Repeatable verification for Module 4 natural-language Q&A.
 
 **Contract:** [question-answering.md](question-answering.md)  
 **Upstream pattern:** [n8n categorization-test-matrix.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization-test-matrix.md)
@@ -16,7 +16,7 @@ Prove the pipeline behaves on **routing + grounded facts**, not only a green-pat
 | **Learning-objective intents** | All five intents from the routing contract |
 | **Synonyms / multi-category** | Colloquial words map to taxonomy; filters combine cleanly |
 | **Edges** | No data, ambiguous time, unknown category, unsupported question |
-| **Budget/diet insights (#10)** | `general_insight` surfaces heuristic signals |
+| **Budget/diet insights** | `general_insight` surfaces heuristic signals |
 
 Prompt or routing changes happen **only** where this matrix shows consistent drift across runs.
 
@@ -41,7 +41,7 @@ Prompt or routing changes happen **only** where this matrix shows consistent dri
 | other | 0.30 |
 | **total** | **13.76** |
 
-Insight signals on that window (see [#10](question-answering.md#budget-and-diet-insights-10)): snacks share of grocery ≈ **29.9%** (warning), top category **drinks** ≈ **49.3%**, discretionary (snacks+drinks) ≈ **63.8%** (warning).
+Insight signals on that window (see [Budget and diet insights](question-answering.md#budget-and-diet-insights)): snacks share of grocery ≈ **29.9%** (warning), top category **drinks** ≈ **49.3%**, discretionary (snacks+drinks) ≈ **63.8%** (warning).
 
 ## How to run the matrix
 
@@ -93,7 +93,7 @@ Few-shot style questions from the routing contract.
 
 ---
 
-## Budget / diet insight scenarios (#10)
+## Budget / diet insight scenarios
 
 Use `general_insight` (or `GET /analytics/insights`) on the fixture window
 `2026-05-01`–`2026-05-19`.
