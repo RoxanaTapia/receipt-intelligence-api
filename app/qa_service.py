@@ -16,6 +16,7 @@ from app.aggregation import aggregate_spending, resolve_time_range
 from app.analytics_models import AggregationResponse, AnalyticsQuery, AnalyticsTimeRange
 from app.claude_client import AnthropicClaudeClient, ClaudeCompleter
 from app.coverage import receipt_coverage
+from app.insight_service import generate_insights
 from app.qa_models import (
     Intent,
     QuestionFacts,
@@ -117,6 +118,7 @@ def _gather_facts(
     summary = None
     average_daily = None
     day_count = None
+    insights = None
 
     if query.intent == Intent.PERIOD_COMPARISON:
         previous = _previous_aggregation(
@@ -137,6 +139,9 @@ def _gather_facts(
             previous=previous,
         )
 
+    if query.intent == Intent.GENERAL_INSIGHT and summary is not None:
+        insights = generate_insights(summary)
+
     if query.intent == Intent.AVERAGE_DAILY_SPEND:
         day_count = (aggregation.end_date - aggregation.start_date).days + 1
         average_daily = round(aggregation.total_spend / day_count, 2) if day_count else 0.0
@@ -147,6 +152,7 @@ def _gather_facts(
         average_daily_spend=average_daily,
         day_count=day_count,
         previous_aggregation=previous,
+        insights=insights,
     )
 
 

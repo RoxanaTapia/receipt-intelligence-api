@@ -17,6 +17,7 @@ from app.analytics_models import (
     AnalyticsTimeRange,
     SummaryResponse,
 )
+from app.insight_models import Insight
 from app.models import Category
 
 
@@ -62,6 +63,7 @@ class QuestionFacts(BaseModel):
     average_daily_spend: float | None = None
     day_count: int | None = None
     previous_aggregation: AggregationResponse | None = None
+    insights: list[Insight] | None = None
 
 
 class QuestionResponse(BaseModel):

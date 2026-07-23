@@ -16,9 +16,11 @@ flowchart LR
   Loader --> Dedup["deduplicate_receipts\n(latest categorized_at)"]
   Dedup --> Agg["aggregate_spending"]
   Agg --> Summary["build_summary"]
+  Summary --> Insights["generate_insights"]
   Dedup --> Coverage["receipt_coverage"]
   Agg --> REST["GET /analytics/spending"]
   Summary --> REST2["GET /analytics/summary"]
+  Insights --> REST4["GET /analytics/insights"]
   Coverage --> REST3["GET /analytics/receipts"]
 ```
 
@@ -29,6 +31,7 @@ flowchart LR
 | Dedup | [`app/aggregation.py`](../app/aggregation.py) | One winner per logical receipt |
 | Aggregate | [`app/aggregation.py`](../app/aggregation.py) | Category totals over a time range |
 | Summarize | [`app/summary.py`](../app/summary.py) | Structured facts from aggregation |
+| Insights | [`app/insight_service.py`](../app/insight_service.py) | Budget/diet heuristics (#10) |
 | Coverage | [`app/coverage.py`](../app/coverage.py) | Files loaded vs logical count |
 | REST | [`app/routers/analytics.py`](../app/routers/analytics.py) | Thin HTTP adapter |
 
@@ -86,9 +89,10 @@ Base URL: `http://localhost:8000`. Interactive docs: `/docs`.
 | `GET` | `/health` | Liveness |
 | `GET` | `/analytics/spending` | Category totals for a time range |
 | `GET` | `/analytics/summary` | Structured summary facts |
+| `GET` | `/analytics/insights` | Budget/diet insight signals (#10) |
 | `GET` | `/analytics/receipts` | Coverage + dedup debug (no time filter) |
 
-### Query parameters (`/spending` and `/summary`)
+### Query parameters (`/spending`, `/summary`, and `/insights`)
 
 Exactly **one** time-range mode. Full rules:
 [Time ranges](analytics-schema.md#time-ranges) and
@@ -116,13 +120,20 @@ curl "http://localhost:8000/analytics/spending?preset=last_N_days&n_days=14&cate
 # Structured summary facts
 curl "http://localhost:8000/analytics/summary?preset=last_month"
 
+# Budget / diet insight signals
+curl "http://localhost:8000/analytics/insights?preset=last_week"
+
 # Coverage + dedup debug
 curl "http://localhost:8000/analytics/receipts"
 ```
 
 Response shapes: [Aggregation](analytics-schema.md#aggregation),
 [Structured summaries](analytics-schema.md#structured-summaries),
+[Budget and diet insights](analytics-schema.md#budget-and-diet-insights),
 [Receipt coverage](analytics-schema.md#receipt-coverage).
+
+Thresholds and insight types:
+[question-answering.md — Budget and diet insights](question-answering.md#budget-and-diet-insights-10).
 
 ## Deduplication
 
@@ -170,6 +181,7 @@ should match the logical set, not `ls | wc -l`.
 | Doc | Contents |
 |-----|----------|
 | [analytics-schema.md](analytics-schema.md) | Contract: ranges, filters, shapes, dedup policy |
+| [question-answering.md](question-answering.md) | Q&A routing, narration, insight thresholds (#10) |
 | [n8n data/README.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/README.md) | Filename pattern, hash, re-runs |
 | [n8n categorization.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization.md) | Upstream categorize → disk pipeline |
 | [AGENTS.md](../AGENTS.md) | Agent workflow for this repo |
