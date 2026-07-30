@@ -17,6 +17,8 @@ Receipts are **written** by [receipt-intelligence-n8n](https://github.com/Roxana
 receipt-intelligence-api/
 ├── AGENTS.md              # Cursor agent workflow — start here
 ├── .cursor/               # Agents, commands, rules
+├── Dockerfile             # Production image (uvicorn on :8000)
+├── .dockerignore          # Lean build context for Docker
 ├── .env.example           # Local config template (incl. ANTHROPIC_API_KEY)
 ├── app/                   # FastAPI application
 │   ├── main.py            # Entrypoint
@@ -85,6 +87,21 @@ Run tests:
 ```bash
 pytest
 ```
+
+### Docker image
+
+Production-oriented image for Compose / VPS (no `--reload`). Default `RECEIPT_DATA_PATH` inside the container is `/data/receipts` — mount categorized JSON there (or override the env var).
+
+```bash
+docker build -t receipt-intelligence-api .
+docker run --rm -p 8000:8000 \
+  -e RECEIPT_DATA_PATH=/data/receipts \
+  -v /absolute/path/to/receipts:/data/receipts \
+  receipt-intelligence-api
+curl http://localhost:8000/health   # {"status":"ok"}
+```
+
+**Demo Compose:** the umbrella repo [`receipt-intelligence-demo`](https://github.com/RoxanaTapia/receipt-intelligence-demo) should build from this repository root (`context` = this repo, `dockerfile` = `Dockerfile`) and mount a shared receipts volume at `/data/receipts` with `RECEIPT_DATA_PATH=/data/receipts`.
 
 ## Documentation
 
