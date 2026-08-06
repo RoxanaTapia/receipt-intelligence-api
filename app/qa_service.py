@@ -67,8 +67,9 @@ def answer_question(
         query = _to_question_query(routed)
     except (ValidationError, ValueError, json.JSONDecodeError, RuntimeError) as exc:
         return _refusal(
-            "I couldn't map that to a spending question I support. "
-            "Try asking about spend by category, daily averages, or shares over a time range.",
+            "I couldn't match that to a spending question I can answer. "
+            "Try asking about spend by category, a daily average, or a share "
+            "over a clear time range — for example, drinks in July.",
             code="routing_failed",
             detail=str(exc),
         )
