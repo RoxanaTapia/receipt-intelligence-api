@@ -7,6 +7,7 @@ Narration must use only structured facts — never invent amounts.
 from __future__ import annotations
 
 import json
+from datetime import date
 from typing import Any
 
 # Distilled from docs/question-answering.md — keep in sync when the contract changes.
@@ -33,6 +34,8 @@ Time range (exactly one mode; rolling windows vs today):
 - last N days → {"preset":"last_N_days","n_days":N}
 - explicit → {"start_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD"}
 - no time mentioned → {"preset":"last_week"} and add warning "defaulted_time_range_to_last_week"
+- named month/season without a year → pick a year inside the receipt data span
+  (prefer the year of latest_date); never invent a year outside that span
 
 Categories (taxonomy only): food, snacks, drinks, household, other.
 Synonyms: healthy food/groceries/produce → food; treats/chips/candy → snacks;
@@ -60,6 +63,10 @@ Q: Give me a simple budget and diet insight.
 Q: How much on soda between 2026-05-01 and 2026-05-19?
 → {"intent":"spending_by_category","time_range":{"start_date":"2026-05-01","end_date":"2026-05-19"},"categories":["drinks"],"compare_to":null,"warnings":[],"error":null}
 
+Q: How much did I spend on drinks in July?
+(with receipt data spanning 2026-07-01…2026-08-31)
+→ {"intent":"spending_by_category","time_range":{"start_date":"2026-07-01","end_date":"2026-07-31"},"categories":["drinks"],"compare_to":null,"warnings":["resolved_month_year_from_receipt_coverage"],"error":null}
+
 ## Output format
 {
   "intent": "<intent or null>",
@@ -69,8 +76,6 @@ Q: How much on soda between 2026-05-01 and 2026-05-19?
   "warnings": [],
   "error": null
 }
-
-User question:
 """
 
 NARRATION_SYSTEM = """\
@@ -78,14 +83,29 @@ You are a spending coach for the Receipt Intelligence System.
 Answer in clear, concise prose using ONLY the structured facts provided.
 Do not invent amounts, merchants, categories, or percentages that are not in the facts JSON.
 If the facts show zero spend or an empty period, say so honestly — do not guess.
+When stating money amounts, write plain numbers with two decimals and no currency
+symbol (e.g. 5.10). Do not use $ or €.
 When facts include insights, treat them as spending-pattern observations only —
 do not make health or nutritional claims.
 Do not mention JSON, prompts, or that you are an AI unless asked.
 """
 
 
-def build_routing_user_message(question: str) -> str:
-    return f"{ROUTING_TASK}{question.strip()}"
+def build_routing_user_message(
+    question: str,
+    *,
+    earliest_date: date | None = None,
+    latest_date: date | None = None,
+) -> str:
+    """Build the router user message, optionally grounded in receipt coverage dates."""
+    span = "unknown (no receipt dates loaded)"
+    if earliest_date is not None and latest_date is not None:
+        span = f"{earliest_date.isoformat()} … {latest_date.isoformat()}"
+    return (
+        f"{ROUTING_TASK}"
+        f"## Receipt data span\n{span}\n\n"
+        f"## User question\n{question.strip()}\n"
+    )
 
 
 def build_narration_user_message(question: str, facts: dict[str, Any]) -> str:
