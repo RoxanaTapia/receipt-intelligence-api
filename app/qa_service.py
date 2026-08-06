@@ -13,7 +13,12 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from app.aggregation import aggregate_spending, resolve_time_range
-from app.analytics_models import AggregationResponse, AnalyticsQuery, AnalyticsTimeRange
+from app.analytics_models import (
+    AggregationResponse,
+    AnalyticsQuery,
+    AnalyticsTimeRange,
+    ReceiptCoverageResponse,
+)
 from app.claude_client import AnthropicClaudeClient, ClaudeCompleter
 from app.coverage import receipt_coverage
 from app.insight_service import generate_insights
@@ -58,7 +63,7 @@ def answer_question(
     reference = as_of or date.today()
 
     try:
-        routed = _route_question(cleaned, client)
+        routed = _route_question(cleaned, client, coverage=coverage)
         query = _to_question_query(routed)
     except (ValidationError, ValueError, json.JSONDecodeError, RuntimeError) as exc:
         return _refusal(
@@ -73,10 +78,19 @@ def answer_question(
     return QuestionResponse(answer=answer, facts=facts, query=query)
 
 
-def _route_question(question: str, claude: ClaudeCompleter) -> RoutedQuery:
+def _route_question(
+    question: str,
+    claude: ClaudeCompleter,
+    *,
+    coverage: ReceiptCoverageResponse,
+) -> RoutedQuery:
     raw = claude.complete(
         system=ROUTING_SYSTEM,
-        user=build_routing_user_message(question),
+        user=build_routing_user_message(
+            question,
+            earliest_date=coverage.earliest_date,
+            latest_date=coverage.latest_date,
+        ),
     )
     payload = _parse_json_object(raw)
     routed = RoutedQuery.model_validate(payload)
