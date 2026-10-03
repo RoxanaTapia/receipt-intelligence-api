@@ -6,7 +6,6 @@ Route question → validate → analytics facts → Claude narration grounded in
 from __future__ import annotations
 
 import json
-import re
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -17,7 +16,6 @@ from app.analytics_models import (
     AggregationResponse,
     AnalyticsQuery,
     AnalyticsTimeRange,
-    ReceiptCoverageResponse,
 )
 from app.claude_client import AnthropicClaudeClient, ClaudeCompleter
 from app.coverage import receipt_coverage
@@ -29,15 +27,9 @@ from app.qa_models import (
     QuestionResponse,
     RoutedQuery,
 )
-from app.qa_prompts import (
-    NARRATION_SYSTEM,
-    ROUTING_SYSTEM,
-    build_narration_user_message,
-    build_routing_user_message,
-)
+from app.qa_prompts import NARRATION_SYSTEM, build_narration_user_message
+from app.qa_routing import _route_question
 from app.summary import build_summary
-
-_JSON_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE | re.MULTILINE)
 
 
 def answer_question(
@@ -77,29 +69,6 @@ def answer_question(
     facts = _gather_facts(query, data_path=data_path, as_of=reference)
     answer = _narrate(cleaned, facts, client)
     return QuestionResponse(answer=answer, facts=facts, query=query)
-
-
-def _route_question(
-    question: str,
-    claude: ClaudeCompleter,
-    *,
-    coverage: ReceiptCoverageResponse,
-) -> RoutedQuery:
-    raw = claude.complete(
-        system=ROUTING_SYSTEM,
-        user=build_routing_user_message(
-            question,
-            earliest_date=coverage.earliest_date,
-            latest_date=coverage.latest_date,
-        ),
-    )
-    payload = _parse_json_object(raw)
-    routed = RoutedQuery.model_validate(payload)
-    if routed.error:
-        raise ValueError(routed.error)
-    if routed.intent is None or routed.time_range is None:
-        raise ValueError("routing response missing intent or time_range")
-    return routed
 
 
 def _to_question_query(routed: RoutedQuery) -> QuestionQuery:
@@ -203,16 +172,6 @@ def _narrate(question: str, facts: QuestionFacts, claude: ClaudeCompleter) -> st
         system=NARRATION_SYSTEM,
         user=build_narration_user_message(question, payload),
     )
-
-
-def _parse_json_object(raw: str) -> dict:
-    text = raw.strip()
-    text = _JSON_FENCE.sub("", text).strip()
-    start = text.find("{")
-    end = text.rfind("}")
-    if start < 0 or end < 0 or end < start:
-        raise json.JSONDecodeError("No JSON object found", text, 0)
-    return json.loads(text[start : end + 1])
 
 
 def _refusal(
