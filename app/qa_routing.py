@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date
 
 from app.analytics_models import ReceiptCoverageResponse
 from app.claude_client import ClaudeCompleter
@@ -18,6 +19,8 @@ def _route_question(
     claude: ClaudeCompleter,
     *,
     coverage: ReceiptCoverageResponse,
+    client_start: date | None = None,
+    client_end: date | None = None,
 ) -> RoutedQuery:
     raw = claude.complete(
         system=ROUTING_SYSTEM,
@@ -25,6 +28,8 @@ def _route_question(
             question,
             earliest_date=coverage.earliest_date,
             latest_date=coverage.latest_date,
+            client_start=client_start,
+            client_end=client_end,
         ),
     )
     payload = _parse_json_object(raw)

@@ -36,4 +36,10 @@ def post_question(
     claude: ClaudeCompleter = Depends(get_claude),
 ) -> QuestionResponse:
     """Answer a spending question grounded in analytics facts."""
-    return answer_question(body.question, data_path=data_path, claude=claude)
+    return answer_question(
+        body.question,
+        data_path=data_path,
+        claude=claude,
+        start_date=body.start_date,
+        end_date=body.end_date,
+    )

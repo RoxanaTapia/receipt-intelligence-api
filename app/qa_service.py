@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 from app.claude_client import AnthropicClaudeClient, ClaudeCompleter
 from app.coverage import receipt_coverage
-from app.qa_facts import _gather_facts, _to_question_query
+from app.qa_facts import _gather_facts, _to_question_query, apply_undated_window
 from app.qa_models import QuestionFacts, QuestionResponse
 from app.qa_prompts import NARRATION_SYSTEM, build_narration_user_message
 from app.qa_routing import _route_question
@@ -25,8 +25,16 @@ def answer_question(
     data_path: Path | None = None,
     claude: ClaudeCompleter | None = None,
     as_of: date | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> QuestionResponse:
-    """Run the full Q&A pipeline and return answer + facts + query."""
+    """Run the full Q&A pipeline and return answer + facts + query.
+
+    ``start_date`` / ``end_date`` are an optional client window. When the
+    question names no period, they replace rolling presets (which would
+    otherwise resolve against today). With neither, the loaded receipt span
+    is used.
+    """
     cleaned = question.strip()
     if not cleaned:
         return _refusal("Please ask a spending question.", code="empty_question")
@@ -42,8 +50,21 @@ def answer_question(
     reference = as_of or date.today()
 
     try:
-        routed = _route_question(cleaned, client, coverage=coverage)
-        query = _to_question_query(routed)
+        routed = _route_question(
+            cleaned,
+            client,
+            coverage=coverage,
+            client_start=start_date,
+            client_end=end_date,
+        )
+        query = apply_undated_window(
+            _to_question_query(routed),
+            question=cleaned,
+            request_start=start_date,
+            request_end=end_date,
+            corpus_start=coverage.earliest_date,
+            corpus_end=coverage.latest_date,
+        )
     except (ValidationError, ValueError, json.JSONDecodeError, RuntimeError) as exc:
         return _refusal(
             "I couldn't match that to a spending question I can answer. "
