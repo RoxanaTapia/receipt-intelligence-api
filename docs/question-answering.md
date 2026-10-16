@@ -64,6 +64,11 @@ curl -s http://localhost:8000/questions \
   -H "Content-Type: application/json" \
   -d '{"question":"How much did I spend on healthy food last week?"}'
 
+# Undated question pinned to an analytics window (same ISO dates as /analytics/summary)
+curl -s http://localhost:8000/questions \
+  -H "Content-Type: application/json" \
+  -d '{"question":"How much did I spend per category?","start_date":"2026-07-01","end_date":"2026-08-31"}'
+
 # Insights without Claude (analytics only)
 curl "http://localhost:8000/analytics/insights?preset=last_week"
 ```
@@ -112,9 +117,13 @@ If the question is empty or not about spending, set `"intent": null` and
 
 ## Time-expression mapping
 
-Map phrases to [time ranges](analytics-schema.md#time-ranges). Windows are
-**rolling** relative to `as_of` (usually today), not calendar week/month
-boundaries.
+Map phrases to [time ranges](analytics-schema.md#time-ranges). Named rolling
+windows (`last_week`, `last_month`, `last_N_days`) are relative to `as_of`
+(usually today), not calendar week/month boundaries. Undated questions do
+**not** use those presets — see the last row below. Python also rewrites a
+rolling preset when the question named no period (`apply_undated_window` in
+[`app/qa_facts.py`](../app/qa_facts.py)), so a router that still emits
+`last_week` is corrected before aggregation.
 
 | Phrase (examples) | Routed `time_range` |
 |-------------------|---------------------|
@@ -123,7 +132,7 @@ boundaries.
 | “yesterday” | `{ "preset": "last_N_days", "n_days": 1 }` |
 | “last N days”, “past N days”, “over the last N days” | `{ "preset": "last_N_days", "n_days": N }` (`N ≥ 1`) |
 | “from DATE to DATE”, “between DATE and DATE”, “in May 2026” (if bounds clear) | `{ "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD" }` |
-| No time mentioned | Default `{ "preset": "last_week" }` |
+| No time mentioned | Explicit dates from the request `start_date`/`end_date` when present; otherwise the loaded receipt span (`earliest_date`…`latest_date`). **Not** rolling `last_week` vs today. |
 
 | Ambiguity | Rule |
 |-----------|------|
@@ -148,7 +157,7 @@ set `"error": "unknown_category"`.
 |-------------|---------------------|
 | One mapped category | `["food"]` (etc.) |
 | Several mentioned | `["food", "drinks"]` (dedupe, taxonomy order optional) |
-| No category / “everything” / “overall” | `null` (all categories) |
+| No category / “everything” / “overall” / “per category” / “by category” | `null` (all categories; breakdown is `aggregation.by_category`) |
 | Synonym not in table and not a taxonomy term | Prefer `null` + note in `warnings`, or `error` if the whole question hinges on that word |
 
 ## Routed query JSON (output contract)
@@ -192,15 +201,28 @@ so the Q&A service can validate with the same Pydantic models.
 }
 ```
 
-**Average daily drinks (default window)**
+**Average daily drinks (no time in the question → corpus span)**
 
 ```json
 {
   "intent": "average_daily_spend",
-  "time_range": { "preset": "last_week" },
+  "time_range": { "start_date": "2026-05-10", "end_date": "2026-05-19" },
   "categories": ["drinks"],
   "compare_to": null,
-  "warnings": ["defaulted_time_range_to_last_week"],
+  "warnings": ["defaulted_time_range_to_corpus_span"],
+  "error": null
+}
+```
+
+**Per-category breakdown over a client window**
+
+```json
+{
+  "intent": "spending_by_category",
+  "time_range": { "start_date": "2026-07-01", "end_date": "2026-08-31" },
+  "categories": null,
+  "compare_to": null,
+  "warnings": ["defaulted_time_range_to_request_window"],
   "error": null
 }
 ```
@@ -249,12 +271,18 @@ Time range (exactly one mode; rolling windows vs today):
 - yesterday → {"preset":"last_N_days","n_days":1}
 - last N days → {"preset":"last_N_days","n_days":N}
 - explicit → {"start_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD"}
-- no time mentioned → {"preset":"last_week"} and add warning "defaulted_time_range_to_last_week"
+- no time mentioned → never use rolling last_week vs today. If a client window
+  is listed below, {"start_date":"...","end_date":"..."} and warning
+  "defaulted_time_range_to_request_window". Otherwise use the receipt data span
+  as explicit dates and warning "defaulted_time_range_to_corpus_span"
+- named month/season without a year → pick a year inside the receipt data span
+  (prefer the year of latest_date); never invent a year outside that span
 
 Categories (taxonomy only): food, snacks, drinks, household, other.
 Synonyms: healthy food/groceries/produce → food; treats/chips/candy → snacks;
 soda/juice/coffee/water → drinks; cleaning/toiletries → household; pfand/deposit → other.
-No category / overall → null. Never invent new category strings.
+No category / overall / per category / by category → null (breakdown is by_category).
+Never invent new category strings.
 
 Period comparison: leave compare_to null unless the user names an explicit previous range; the API resolves the immediately previous equal-length window.
 
@@ -263,7 +291,8 @@ Q: How much did I spend on healthy food last week?
 → {"intent":"spending_by_category","time_range":{"preset":"last_week"},"categories":["food"],"compare_to":null,"warnings":[],"error":null}
 
 Q: What's my average daily spending on drinks?
-→ {"intent":"average_daily_spend","time_range":{"preset":"last_week"},"categories":["drinks"],"compare_to":null,"warnings":["defaulted_time_range_to_last_week"],"error":null}
+(with receipt data spanning 2026-05-10…2026-05-19, no client window)
+→ {"intent":"average_daily_spend","time_range":{"start_date":"2026-05-10","end_date":"2026-05-19"},"categories":["drinks"],"compare_to":null,"warnings":["defaulted_time_range_to_corpus_span"],"error":null}
 
 Q: What percent of my spending was snacks last month?
 → {"intent":"category_share","time_range":{"preset":"last_month"},"categories":["snacks"],"compare_to":null,"warnings":[],"error":null}
@@ -272,10 +301,19 @@ Q: How does my food spend last week compare to the week before?
 → {"intent":"period_comparison","time_range":{"preset":"last_week"},"categories":["food"],"compare_to":null,"warnings":["compare_to_defaults_to_previous_equal_window"],"error":null}
 
 Q: Give me a simple budget and diet insight.
-→ {"intent":"general_insight","time_range":{"preset":"last_week"},"categories":null,"compare_to":null,"warnings":["defaulted_time_range_to_last_week"],"error":null}
+(with receipt data spanning 2026-05-10…2026-05-19, no client window)
+→ {"intent":"general_insight","time_range":{"start_date":"2026-05-10","end_date":"2026-05-19"},"categories":null,"compare_to":null,"warnings":["defaulted_time_range_to_corpus_span"],"error":null}
 
 Q: How much on soda between 2026-05-01 and 2026-05-19?
 → {"intent":"spending_by_category","time_range":{"start_date":"2026-05-01","end_date":"2026-05-19"},"categories":["drinks"],"compare_to":null,"warnings":[],"error":null}
+
+Q: How much did I spend on drinks in July?
+(with receipt data spanning 2026-07-01…2026-08-31)
+→ {"intent":"spending_by_category","time_range":{"start_date":"2026-07-01","end_date":"2026-07-31"},"categories":["drinks"],"compare_to":null,"warnings":["resolved_month_year_from_receipt_coverage"],"error":null}
+
+Q: How much did I spend per category?
+(with client window 2026-07-01…2026-08-31)
+→ {"intent":"spending_by_category","time_range":{"start_date":"2026-07-01","end_date":"2026-08-31"},"categories":null,"compare_to":null,"warnings":["defaulted_time_range_to_request_window"],"error":null}
 
 ## Output format
 {
@@ -287,7 +325,13 @@ Q: How much on soda between 2026-05-01 and 2026-05-19?
   "error": null
 }
 
-User question:
+## Receipt data span
+{{EARLIEST}} … {{LATEST}}
+
+## Client window
+{{CLIENT_WINDOW_OR_NONE}}
+
+## User question
 {{QUESTION}}
 ```
 
@@ -296,11 +340,13 @@ User question:
 | # | Pattern | Intent | Notable mapping |
 |---|---------|--------|-----------------|
 | 1 | Category + “last week” | `spending_by_category` | “healthy food” → `food` |
-| 2 | “Average daily” + category | `average_daily_spend` | Default time → `last_week` + warning |
+| 2 | “Average daily” + category | `average_daily_spend` | No time → corpus span + warning |
 | 3 | “Percent / share” | `category_share` | Snacks + `last_month` |
 | 4 | “Compare to” prior period | `period_comparison` | `compare_to: null` → previous equal window |
-| 5 | Budget / diet insight | `general_insight` | `categories: null` |
+| 5 | Budget / diet insight | `general_insight` | `categories: null`; no time → corpus span |
 | 6 | Synonym + explicit dates | `spending_by_category` | “soda” → `drinks` |
+| 7 | Bare month + coverage year | `spending_by_category` | “July” → July inside receipt span |
+| 8 | “Per category” + client window | `spending_by_category` | `categories: null`; request dates |
 
 ## Parse → validate
 
@@ -310,6 +356,7 @@ After the routing call (`app/qa_service.py`):
 |------|-------|
 | Parse | Non-empty response; valid JSON object |
 | Validate | `intent` in allowed set (or error path); `time_range` / `categories` via `AnalyticsQuery` rules |
+| Undated window | If the question named no period and routing still returned a rolling preset, replace it with request `start_date`/`end_date` or the receipt span |
 | Fail closed | On `error` or validation failure → refuse; do not call aggregation with guessed filters |
 | No receipts | If coverage shows zero files/logical receipts → refuse without calling Claude |
 
@@ -350,8 +397,14 @@ Plain-text answer only — no markdown fences, no extra JSON wrapper.
 
 ### Endpoint shape
 
-`POST /questions` with `{ "question": "..." }` returns
-`{ "answer", "facts", "query", "meta?" }` — see [Setup and curl](#setup-and-curl).
+`POST /questions` with `{ "question": "...", "start_date"?: "...", "end_date"?: "..." }`
+returns `{ "answer", "facts", "query", "meta?" }` — see [Setup and curl](#setup-and-curl).
+Optional `start_date` / `end_date` are inclusive ISO dates, same contract as
+`GET /analytics/summary`. Both are required when either is sent; unknown extra
+fields are ignored. When the question names no period, those bounds (or the
+loaded receipt span if omitted) replace a rolling preset so undated demo
+questions are not resolved against clock-today.
+
 For `general_insight`, `facts.insights` holds the structured insight list from
 [`generate_insights()`](../app/insight_service.py).
 

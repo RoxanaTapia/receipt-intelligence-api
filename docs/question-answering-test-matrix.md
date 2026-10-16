@@ -73,11 +73,12 @@ Few-shot style questions from the routing contract.
 | ID | Question | Expected intent | Expected routing highlights | Key facts (fixture corpus) |
 |----|----------|-----------------|----------------------------|----------------------------|
 | L1 | How much did I spend on healthy food last week? | `spending_by_category` | `categories: ["food"]`, `time_range.preset: last_week` | food spend in resolved window |
-| L2 | What's my average daily spending on drinks? | `average_daily_spend` | `categories: ["drinks"]`, default `last_week` + warning `defaulted_time_range_to_last_week` | `average_daily_spend`, `day_count` |
+| L2 | What's my average daily spending on drinks? | `average_daily_spend` | `categories: ["drinks"]`; no time → corpus span (or request window) | `average_daily_spend`, `day_count` |
 | L3 | What percent of my spending was snacks last month? | `category_share` | `categories: ["snacks"]`, `preset: last_month` | snacks `%` from summary |
 | L4 | How does my food spend last week compare to the week before? | `period_comparison` | `categories: ["food"]`, `compare_to: null` (previous equal window) | current + `previous_aggregation` |
-| L5 | Give me a simple budget and diet insight. | `general_insight` | `categories: null`, default `last_week` + default-time warning | `facts.insights` (3 signals) |
+| L5 | Give me a simple budget and diet insight. | `general_insight` | `categories: null`; no time → corpus span (or request window) | `facts.insights` (3 signals) |
 | L6 | How much on soda between 2026-05-01 and 2026-05-19? | `spending_by_category` | `categories: ["drinks"]`, explicit dates | drinks **6.78** |
+| D1 | How much did I spend per category? | `spending_by_category` | `categories: null`; request `start_date`/`end_date` (or corpus span) | all-category totals; fixture window **13.76** |
 
 ---
 
@@ -120,7 +121,7 @@ Success rows used by `tests/test_qa_matrix.py` — keep in sync when editing the
 | ID | Expected `RoutedQuery` JSON |
 |----|-----------------------------|
 | L1 | `{"intent":"spending_by_category","time_range":{"preset":"last_week"},"categories":["food"],"compare_to":null,"warnings":[],"error":null}` |
-| L2 | `{"intent":"average_daily_spend","time_range":{"preset":"last_week"},"categories":["drinks"],"compare_to":null,"warnings":["defaulted_time_range_to_last_week"],"error":null}` |
+| L2 | `{"intent":"average_daily_spend","time_range":{"preset":"last_week"},"categories":["drinks"],"compare_to":null,"warnings":["defaulted_time_range_to_last_week"],"error":null}` (API rewrites undated presets to corpus/request dates) |
 | L3 | `{"intent":"category_share","time_range":{"preset":"last_month"},"categories":["snacks"],"compare_to":null,"warnings":[],"error":null}` |
 | L4 | `{"intent":"period_comparison","time_range":{"preset":"last_week"},"categories":["food"],"compare_to":null,"warnings":["compare_to_defaults_to_previous_equal_window"],"error":null}` |
 | L5 | `{"intent":"general_insight","time_range":{"preset":"last_week"},"categories":null,"compare_to":null,"warnings":["defaulted_time_range_to_last_week"],"error":null}` |
@@ -130,8 +131,13 @@ Success rows used by `tests/test_qa_matrix.py` — keep in sync when editing the
 | E4 | `{"intent":null,"time_range":null,"categories":null,"compare_to":null,"warnings":[],"error":"unsupported_question"}` |
 | E5 | `{"intent":"spending_by_category","time_range":{"start_date":"2026-05-01","end_date":"2026-05-19"},"categories":["food","snacks"],"compare_to":null,"warnings":[],"error":null}` |
 | I1 | `{"intent":"general_insight","time_range":{"start_date":"2026-05-01","end_date":"2026-05-19"},"categories":null,"compare_to":null,"warnings":[],"error":null}` |
+| D1 | `{"intent":"spending_by_category","time_range":{"start_date":"2026-05-01","end_date":"2026-05-19"},"categories":null,"compare_to":null,"warnings":["defaulted_time_range_to_request_window"],"error":null}` |
 
-**Count:** 11 routing rows + E1 (empty data) = **12** scenarios (≥10 required).
+**Count:** 12 routing rows + E1 (empty data) = **13** scenarios (≥10 required).
+
+L2 and L5 still list the historic `last_week` default in the JSON table so
+scripted-router checks stay valid. The pipeline rewrites that preset when the
+question named no period — see [Time-expression mapping](question-answering.md#time-expression-mapping).
 
 ---
 
@@ -158,7 +164,7 @@ Fill after a live two-run pass (optional for PR; useful before Module 5):
 | Limitation | Notes |
 |------------|-------|
 | **Narration wording** | Claude prose varies; assert **facts JSON**, not exact answer text |
-| **Rolling windows** | Presets depend on `as_of` / “today” — pin dates for key-fact checks |
+| **Rolling windows** | Presets depend on `as_of` / “today” — pin dates for key-fact checks. Undated questions use the request window or corpus span, not clock-today. |
 | **Live vs fixtures** | Sibling `data/receipts/` amounts differ from aggregation fixtures |
 | **Sample PDFs** | Anonymized PDFs live in n8n `samples/`; Q&A matrix uses **categorized JSON**, not PDF re-ingest |
 
