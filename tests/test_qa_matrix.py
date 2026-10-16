@@ -6,6 +6,7 @@ Keep ROUTING_CASES in sync with docs/question-answering-test-matrix.md.
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
@@ -142,6 +143,17 @@ ROUTING_CASES: list[tuple[str, dict]] = [
             "error": None,
         },
     ),
+    (
+        "D1",
+        {
+            "intent": "spending_by_category",
+            "time_range": {"start_date": "2026-05-01", "end_date": "2026-05-19"},
+            "categories": None,
+            "compare_to": None,
+            "warnings": ["defaulted_time_range_to_request_window"],
+            "error": None,
+        },
+    ),
 ]
 
 
@@ -218,6 +230,26 @@ def test_matrix_e4_routing_error_refuses() -> None:
 
 def teardown_function() -> None:
     app.dependency_overrides.clear()
+
+
+def test_matrix_d1_per_category_range_key_fact() -> None:
+    """D1: undated per-category + request window → all-category breakdown."""
+    route = dict(ROUTING_CASES[11][1])  # D1
+    claude = ScriptedClaude(route, answer="Spend by category for the window.")
+    result = answer_question(
+        "How much did I spend per category?",
+        data_path=AGG_FIXTURES,
+        claude=claude,
+        start_date=date(2026, 5, 1),
+        end_date=date(2026, 5, 19),
+    )
+    assert result.facts is not None
+    assert result.facts.aggregation.total_spend == pytest.approx(13.76)
+    assert result.query is not None
+    assert result.query.intent == Intent.SPENDING_BY_CATEGORY
+    assert result.query.analytics.categories is None
+    names = {row.category.value for row in result.facts.aggregation.by_category}
+    assert names == {"food", "snacks", "drinks", "other"}
 
 
 def test_matrix_l6_via_http() -> None:

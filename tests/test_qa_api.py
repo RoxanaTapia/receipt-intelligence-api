@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.qa_facts import (
+    DEFAULTED_TO_CORPUS_SPAN,
+    DEFAULTED_TO_REQUEST_WINDOW,
+    question_mentions_time,
+)
 from app.qa_service import answer_question
 from app.routers import questions as questions_router
 
@@ -141,6 +147,166 @@ def test_missing_api_key_returns_503() -> None:
 
 def test_openapi_includes_questions() -> None:
     client = TestClient(app)
-    paths = client.get("/openapi.json").json()["paths"]
+    spec = client.get("/openapi.json").json()
+    paths = spec["paths"]
     assert "/questions" in paths
     assert "post" in paths["/questions"]
+    body_schema = spec["components"]["schemas"]["QuestionRequest"]
+    assert "start_date" in body_schema["properties"]
+    assert "end_date" in body_schema["properties"]
+    assert "question" in body_schema["required"]
+    assert "start_date" not in body_schema.get("required", [])
+
+
+_PER_CATEGORY_ROUTE = {
+    "intent": "spending_by_category",
+    "time_range": {"preset": "last_week"},
+    "categories": None,
+    "compare_to": None,
+    "warnings": ["defaulted_time_range_to_last_week"],
+    "error": None,
+}
+
+
+def test_undated_per_category_uses_request_window() -> None:
+    """Demo bug: undated 'per category' must not resolve last_week vs today."""
+    claude = ScriptedClaude(_PER_CATEGORY_ROUTE, answer="Here is spend by category.")
+    client = _client(AGG_FIXTURES, claude)
+    response = client.post(
+        "/questions",
+        json={
+            "question": "How much did I spend per category?",
+            "start_date": "2026-05-01",
+            "end_date": "2026-05-19",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["facts"] is not None
+    aggregation = body["facts"]["aggregation"]
+    assert aggregation["start_date"] == "2026-05-01"
+    assert aggregation["end_date"] == "2026-05-19"
+    assert aggregation["total_spend"] == 13.76
+    by_category = {row["category"]: row["total_spend"] for row in aggregation["by_category"]}
+    assert by_category == {
+        "food": 4.68,
+        "snacks": 2.0,
+        "drinks": 6.78,
+        "other": 0.3,
+    }
+    assert body["query"]["intent"] == "spending_by_category"
+    assert body["query"]["analytics"]["categories"] is None
+    assert body["query"]["warnings"] == [DEFAULTED_TO_REQUEST_WINDOW]
+
+
+def test_undated_question_defaults_to_corpus_span() -> None:
+    claude = ScriptedClaude(_PER_CATEGORY_ROUTE)
+    result = answer_question(
+        "How much did I spend per category?",
+        data_path=AGG_FIXTURES,
+        claude=claude,
+    )
+    assert result.facts is not None
+    assert result.facts.aggregation.start_date == date(2026, 5, 10)
+    assert result.facts.aggregation.end_date == date(2026, 5, 19)
+    assert result.facts.aggregation.total_spend == 13.76
+    assert result.query is not None
+    assert result.query.warnings == [DEFAULTED_TO_CORPUS_SPAN]
+
+
+def test_last_week_question_keeps_preset_despite_request_window() -> None:
+    claude = ScriptedClaude(
+        {
+            "intent": "spending_by_category",
+            "time_range": {"preset": "last_week"},
+            "categories": ["food"],
+            "compare_to": None,
+            "warnings": [],
+            "error": None,
+        }
+    )
+    result = answer_question(
+        "How much did I spend on healthy food last week?",
+        data_path=AGG_FIXTURES,
+        claude=claude,
+        as_of=date(2026, 5, 16),
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 8, 31),
+    )
+    assert result.facts is not None
+    assert result.facts.aggregation.start_date == date(2026, 5, 10)
+    assert result.facts.aggregation.end_date == date(2026, 5, 16)
+    assert result.query is not None
+    assert result.query.analytics.time_range.preset is not None
+
+
+def test_named_month_range_is_not_replaced_by_request_window() -> None:
+    claude = ScriptedClaude(
+        {
+            "intent": "spending_by_category",
+            "time_range": {"start_date": "2026-05-01", "end_date": "2026-05-31"},
+            "categories": ["drinks"],
+            "compare_to": None,
+            "warnings": ["resolved_month_year_from_receipt_coverage"],
+            "error": None,
+        }
+    )
+    result = answer_question(
+        "How much did I spend on drinks in May?",
+        data_path=AGG_FIXTURES,
+        claude=claude,
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 8, 31),
+    )
+    assert result.facts is not None
+    assert result.facts.aggregation.start_date == date(2026, 5, 1)
+    assert result.facts.aggregation.end_date == date(2026, 5, 31)
+    assert result.facts.aggregation.total_spend == 6.78
+
+
+def test_one_sided_date_returns_422() -> None:
+    claude = ScriptedClaude(_PER_CATEGORY_ROUTE)
+    client = _client(AGG_FIXTURES, claude)
+    response = client.post(
+        "/questions",
+        json={"question": "How much did I spend per category?", "start_date": "2026-05-01"},
+    )
+    assert response.status_code == 422
+    assert claude.calls == []
+
+
+def test_reversed_dates_return_422() -> None:
+    claude = ScriptedClaude(_PER_CATEGORY_ROUTE)
+    client = _client(AGG_FIXTURES, claude)
+    response = client.post(
+        "/questions",
+        json={
+            "question": "How much did I spend per category?",
+            "start_date": "2026-08-31",
+            "end_date": "2026-07-01",
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_unknown_body_field_is_ignored() -> None:
+    claude = ScriptedClaude(_PER_CATEGORY_ROUTE, answer="Totals from the corpus.")
+    client = _client(AGG_FIXTURES, claude)
+    response = client.post(
+        "/questions",
+        json={
+            "question": "How much did I spend per category?",
+            "unexpected_field": "ok",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["facts"]["aggregation"]["total_spend"] == 13.76
+
+
+def test_question_mentions_time_detects_periods() -> None:
+    assert question_mentions_time("How much did I spend per category?") is False
+    assert question_mentions_time("What's my average daily spending on drinks?") is False
+    assert question_mentions_time("How much did I spend on healthy food last week?") is True
+    assert question_mentions_time("How much did I spend on drinks in July?") is True
+    assert question_mentions_time("How much between 2026-05-01 and 2026-05-19?") is True
