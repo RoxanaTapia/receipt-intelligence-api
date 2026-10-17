@@ -17,6 +17,7 @@ Pydantic mirrors live in [`app/analytics_models.py`](../app/analytics_models.py)
 | Structured summaries | [`app/summary.py`](../app/summary.py) |
 | REST endpoints | [`app/routers/analytics.py`](../app/routers/analytics.py) |
 | Receipt coverage | [`app/coverage.py`](../app/coverage.py) |
+| Printed total check | [`app/total_check.py`](../app/total_check.py) |
 
 ```mermaid
 flowchart LR
@@ -37,8 +38,9 @@ flowchart LR
 6. [Structured summaries](#structured-summaries)
 7. [REST query parameters](#rest-query-parameters)
 8. [Receipt coverage](#receipt-coverage)
-9. [Pydantic mapping](#pydantic-mapping)
-10. [Related docs](#related-docs)
+9. [Printed total check](#printed-total-check)
+10. [Pydantic mapping](#pydantic-mapping)
+11. [Related docs](#related-docs)
 
 ## Date semantics
 
@@ -351,9 +353,30 @@ Live OpenAPI: `GET /docs` when the API is running.
   "deduplication": {
     "deduplicated_count": 1,
     "superseded_files": ["2026-05-15_rewe_aaaaaaaa.json"]
+  },
+  "printed_total_check": {
+    "match_count": 2,
+    "mismatch_count": 1,
+    "missing_count": 0,
+    "tolerance": 0.02,
+    "receipts": [
+      {
+        "source_file": "2026-05-10_aldi_aaaaaaaa.json",
+        "merchant": "ALDI",
+        "date": "2026-05-10",
+        "printed_total": 8.5,
+        "computed_total": 8.5,
+        "difference": 0.0,
+        "status": "match",
+        "tolerance": 0.02
+      }
+    ]
   }
 }
 ```
+
+The `receipts` array has one object per logical receipt; the JSON above shows a
+single example row.
 
 | Field | Meaning |
 |-------|---------|
@@ -361,6 +384,55 @@ Live OpenAPI: `GET /docs` when the API is running.
 | `logical_receipt_count` | Winners after dedup |
 | `earliest_date` / `latest_date` | Transaction-date span of logical receipts (`null` if none) |
 | `deduplication` | Same metadata as aggregation |
+| `printed_total_check` | Line-item sum vs printed total for each **logical** receipt (see [Printed total check](#printed-total-check)) |
+
+## Printed total check
+
+Spending aggregation still sums line-item `price` values. Separately, coverage
+compares that computed amount to the **printed** total extracted from the slip.
+
+`GET /analytics/receipts` includes `printed_total_check` so a frontend (or later
+Q&A narration) can say whether each logical receipt total was verified. Q&A
+does **not** narrate this yet.
+
+### Computed amount
+
+```
+computed_total = round(sum(line_item.price) + (tax or 0) + (fees or 0), 2)
+```
+
+Each `price` is already the line total (quantity is not multiplied). Optional
+`tax` and `fees` are added only when they appear as separate JSON fields — not
+when they are already line items (for example Pfand under `other`).
+
+### Statuses
+
+| `status` | When |
+|----------|------|
+| `match` | Printed total is present and `abs(computed_total − printed_total) ≤ 0.02` |
+| `mismatch` | Printed total is present and the difference is outside that tolerance |
+| `missing` | `total` / `printed_total` omitted from the JSON |
+
+Tolerance is **€0.02** (two cents) to absorb rounding. The same value is echoed
+on the summary and on each receipt row.
+
+### Incoming JSON (n8n)
+
+Existing receipts that already send `total` keep loading. The field is optional
+so a file without a printed total still validates (`status: missing`) instead of
+being skipped.
+
+| Field | Required | Meaning |
+|-------|----------|---------|
+| `total` | No (recommended) | Amount **printed** on the receipt (Summe/Total). Alias: `printed_total`. |
+| `tax` | No | Printed tax when it is **not** already a line item. |
+| `fees` | No | Printed fees when they are **not** already line items. |
+
+`total` must be the printed figure, not a recomputed sum of extracted lines —
+otherwise the check would always match and would not catch dropped items.
+
+Spending, summary, insights, and Q&A response **shapes are unchanged** aside from
+this new object on coverage.
 
 ## Pydantic mapping
 
@@ -376,12 +448,16 @@ Live OpenAPI: `GET /docs` when the API is running.
 | Period delta | `PeriodDelta` |
 | Summary result | `SummaryResponse` |
 | Receipt coverage | `ReceiptCoverageResponse` |
+| Printed-total status | `PrintedTotalStatus` (`match` / `mismatch` / `missing`) |
+| Per-receipt total check | `PrintedTotalCheck` |
+| Printed-total roll-up | `PrintedTotalCheckSummary` |
 
 | Service | Module |
 |---------|--------|
 | Aggregation | [`app/aggregation.py`](../app/aggregation.py) |
 | Summaries | [`app/summary.py`](../app/summary.py) |
 | Coverage | [`app/coverage.py`](../app/coverage.py) |
+| Printed total check | [`app/total_check.py`](../app/total_check.py) |
 | REST routes | [`app/routers/analytics.py`](../app/routers/analytics.py) |
 
 Receipt / line-item persistence shapes remain in [`app/models.py`](../app/models.py).

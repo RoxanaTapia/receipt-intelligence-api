@@ -29,6 +29,7 @@ receipt-intelligence-api/
 │   ├── aggregation.py     # Spending aggregation + dedup
 │   ├── summary.py         # Structured summaries
 │   ├── coverage.py        # Receipt coverage metadata
+│   ├── total_check.py     # Printed total vs line-item sum
 │   ├── insight_service.py # Budget/diet insight heuristics
 │   ├── qa_service.py      # Q&A pipeline
 │   └── loader.py          # Read and flatten receipt JSON

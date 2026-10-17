@@ -18,6 +18,8 @@ flowchart LR
   Agg --> Summary["build_summary"]
   Summary --> Insights["generate_insights"]
   Dedup --> Coverage["receipt_coverage"]
+  Dedup --> Totals["printed_total_check"]
+  Totals --> Coverage
   Agg --> REST["GET /analytics/spending"]
   Summary --> REST2["GET /analytics/summary"]
   Insights --> REST4["GET /analytics/insights"]
@@ -33,6 +35,7 @@ flowchart LR
 | Summarize | [`app/summary.py`](../app/summary.py) | Structured facts from aggregation |
 | Insights | [`app/insight_service.py`](../app/insight_service.py) | Budget/diet heuristics |
 | Coverage | [`app/coverage.py`](../app/coverage.py) | Files loaded vs logical count |
+| Printed total | [`app/total_check.py`](../app/total_check.py) | Line items (+ tax/fees) vs printed total |
 | REST | [`app/routers/analytics.py`](../app/routers/analytics.py) | Thin HTTP adapter |
 
 Routes stay thin: query params → `AnalyticsQuery` → service → response model
@@ -90,7 +93,7 @@ Base URL: `http://localhost:8000`. Interactive docs: `/docs`.
 | `GET` | `/analytics/spending` | Category totals for a time range |
 | `GET` | `/analytics/summary` | Structured summary facts |
 | `GET` | `/analytics/insights` | Budget/diet insight signals |
-| `GET` | `/analytics/receipts` | Coverage + dedup debug (no time filter) |
+| `GET` | `/analytics/receipts` | Coverage, dedup debug, and printed-total checks (no time filter) |
 
 ### Query parameters (`/spending`, `/summary`, and `/insights`)
 
@@ -123,7 +126,7 @@ curl "http://localhost:8000/analytics/summary?preset=last_month"
 # Budget / diet insight signals
 curl "http://localhost:8000/analytics/insights?preset=last_week"
 
-# Coverage + dedup debug
+# Coverage + dedup debug + printed-total checks
 curl "http://localhost:8000/analytics/receipts"
 ```
 
@@ -175,6 +178,25 @@ Compare:
 
 If `files_loaded` > `logical_receipt_count`, dedup is doing its job — spending totals
 should match the logical set, not `ls | wc -l`.
+
+## Printed total check
+
+`GET /analytics/receipts` also reports whether each **logical** receipt’s line
+items (plus optional `tax` / `fees`) match the amount printed on the slip.
+
+| `printed_total_check` field | Meaning |
+|----------------------------|---------|
+| `status` | `match`, `mismatch`, or `missing` |
+| `printed_total` | Extracted printed amount (`total` in the JSON); `null` if omitted |
+| `computed_total` | `round(sum(prices) + tax + fees, 2)` |
+| `difference` | computed − printed; `null` when missing |
+| `tolerance` | Absolute slack used for `match` (**€0.02**) |
+
+This is a data-quality signal. Spend endpoints still total line-item prices and
+do not drop mismatched receipts. Q&A does not narrate the check yet.
+
+JSON field contract (what n8n should write):
+[Printed total check](analytics-schema.md#printed-total-check).
 
 ## Related docs
 
