@@ -101,5 +101,5 @@ def get_insights(
 def get_receipts(
     data_path: Path = Depends(get_data_path),
 ) -> ReceiptCoverageResponse:
-    """Coverage and dedup metadata for debugging duplicate hash files."""
+    """Coverage, dedup metadata, and printed-total checks for loaded receipts."""
     return receipt_coverage(data_path)

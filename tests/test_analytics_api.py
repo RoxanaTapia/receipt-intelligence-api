@@ -121,6 +121,31 @@ def test_receipts_coverage_and_dedup() -> None:
     assert len(body["loaded_files"]) == 4
 
 
+def test_receipts_exposes_printed_total_check() -> None:
+    client = _client(AGG_FIXTURES)
+    response = client.get("/analytics/receipts")
+
+    assert response.status_code == 200
+    check = response.json()["printed_total_check"]
+    assert check["tolerance"] == 0.02
+    assert check["match_count"] + check["mismatch_count"] + check["missing_count"] == 3
+    assert check["match_count"] == 2
+    assert check["mismatch_count"] == 1
+    assert check["missing_count"] == 0
+
+    by_file = {row["source_file"]: row for row in check["receipts"]}
+    aldi = by_file["2026-05-10_aldi_aaaaaaaa.json"]
+    assert aldi["status"] == "match"
+    assert aldi["printed_total"] == 8.5
+    assert aldi["computed_total"] == 8.5
+
+    rewe = by_file["2026-05-19_rewe_cccccccc.json"]
+    assert rewe["status"] == "mismatch"
+    assert rewe["printed_total"] == 5.66
+    assert rewe["computed_total"] == 4.07
+    assert "2026-05-15_rewe_aaaaaaaa.json" not in by_file
+
+
 def test_validation_rejects_unknown_category() -> None:
     client = _client(AGG_FIXTURES)
     response = client.get(
@@ -180,6 +205,8 @@ def test_empty_data_returns_clear_zero_payload(tmp_path: Path) -> None:
     assert cov["earliest_date"] is None
     assert cov["latest_date"] is None
     assert cov["data_path_exists"] is True
+    assert cov["printed_total_check"]["receipts"] == []
+    assert cov["printed_total_check"]["match_count"] == 0
 
 
 def test_openapi_includes_analytics_paths() -> None:

@@ -1,5 +1,6 @@
 """Smoke tests for the receipt loader."""
 
+import json
 from pathlib import Path
 
 from app.loader import load_line_items, load_receipts
@@ -37,3 +38,25 @@ def test_skips_invalid_json(tmp_path: Path) -> None:
     (tmp_path / "bad.json").write_text('{"merchant": "REWE"}', encoding="utf-8")
     assert load_line_items(tmp_path) == []
     assert load_receipts(tmp_path) == []
+
+
+def test_loads_receipt_without_printed_total(tmp_path: Path) -> None:
+    payload = {
+        "merchant": "REWE",
+        "date": "2026-05-19",
+        "line_items": [
+            {
+                "description": "MILCH",
+                "quantity": 1,
+                "price": 1.19,
+                "category": "food",
+            }
+        ],
+    }
+    (tmp_path / "no_total.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = load_receipts(tmp_path)
+
+    assert len(loaded) == 1
+    assert loaded[0].receipt.total is None
+    assert loaded[0].receipt.line_items[0].price == 1.19

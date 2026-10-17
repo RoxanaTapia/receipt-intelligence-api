@@ -1,7 +1,7 @@
 """Analytics query and response schemas — the Module 4 data contract (#3).
 
-Aggregation (#4), summaries (#5), REST (#6), and Q&A layers reuse these shapes
-so time ranges, filters, and dedup metadata stay consistent.
+Aggregation (#4), summaries (#5), REST (#6), Q&A, and the printed-total check
+reuse these shapes so time ranges, filters, and coverage metadata stay consistent.
 See docs/analytics-schema.md.
 """
 
@@ -152,6 +152,45 @@ class SummaryResponse(BaseModel):
     period_delta: PeriodDelta | None = None
 
 
+class PrintedTotalStatus(str, Enum):
+    """Whether computed line items (+ tax/fees) match the printed receipt total."""
+
+    MATCH = "match"
+    MISMATCH = "mismatch"
+    MISSING = "missing"
+
+
+class PrintedTotalCheck(BaseModel):
+    """One logical receipt compared to the amount printed on the slip."""
+
+    source_file: str
+    merchant: str
+    date: str
+    printed_total: float | None = Field(
+        default=None,
+        description="Extracted printed total (`total` / `printed_total`); null if omitted",
+    )
+    computed_total: float = Field(
+        description="Sum of line-item prices plus optional tax and fees, rounded to cents",
+    )
+    difference: float | None = Field(
+        default=None,
+        description="computed_total − printed_total; null when printed total is missing",
+    )
+    status: PrintedTotalStatus
+    tolerance: float = Field(description="Absolute rounding tolerance used for match")
+
+
+class PrintedTotalCheckSummary(BaseModel):
+    """Roll-up of printed-total checks for logical (deduped) receipts."""
+
+    match_count: int = Field(ge=0)
+    mismatch_count: int = Field(ge=0)
+    missing_count: int = Field(ge=0)
+    tolerance: float
+    receipts: list[PrintedTotalCheck]
+
+
 class ReceiptCoverageResponse(BaseModel):
     """Debug view of loaded files, dedup winners, and covered transaction dates."""
 
@@ -176,3 +215,9 @@ class ReceiptCoverageResponse(BaseModel):
         description="Filenames successfully loaded before dedup",
     )
     deduplication: DeduplicationMeta
+    printed_total_check: PrintedTotalCheckSummary = Field(
+        description=(
+            "Whether each logical receipt's line items (+ tax/fees) match the "
+            "printed total, within rounding tolerance"
+        ),
+    )
