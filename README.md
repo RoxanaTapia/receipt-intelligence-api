@@ -1,22 +1,23 @@
 # Receipt Intelligence API
 
-FastAPI backend for spending analytics and natural-language Q&A over categorized receipt JSON.
+You point this API at categorized receipt JSON and ask it about your spending. It totals what you spent by category and by time, and it answers everyday questions in plain language — for example, how much you spent on groceries last week.
 
-Receipts are **written** by [receipt-intelligence-n8n](https://github.com/RoxanaTapia/receipt-intelligence-n8n) (n8n workflows). This repo **reads** `data/receipts/*.json` from the sibling project.
+Those files are written by [receipt-intelligence-n8n](https://github.com/RoxanaTapia/receipt-intelligence-n8n), which turns receipt PDFs into categorized JSON under `data/receipts/`. This API reads that folder. When you want both pieces running together, the [receipt demo](https://github.com/RoxanaTapia/receipt-intelligence-demo) builds this repo and mounts the shared receipts volume.
 
 ## Related repositories
 
 | Repo | Role |
 |------|------|
 | [`receipt-intelligence-n8n`](https://github.com/RoxanaTapia/receipt-intelligence-n8n) | PDF ingest, categorization, `data/receipts/` output |
-| **This repo** | Analytics, REST API, Q&A |
+| [`receipt-intelligence-demo`](https://github.com/RoxanaTapia/receipt-intelligence-demo) | Compose demo that builds this API and shares a receipts volume |
+| **This repo** | Analytics, REST API, natural-language questions |
 
 ## Repository structure
 
 ```
 receipt-intelligence-api/
-├── AGENTS.md              # Cursor agent workflow — start here
-├── .cursor/               # Agents, commands, rules
+├── AGENTS.md              # Notes for people changing this repo
+├── .cursor/               # Commands and rules for contributors
 ├── Dockerfile             # Production image (uvicorn on :8000)
 ├── .dockerignore          # Lean build context for Docker
 ├── .env.example           # Local config template (incl. ANTHROPIC_API_KEY)
@@ -29,15 +30,16 @@ receipt-intelligence-api/
 │   ├── aggregation.py     # Spending aggregation + dedup
 │   ├── summary.py         # Structured summaries
 │   ├── coverage.py        # Receipt coverage metadata
-│   ├── insight_service.py # Budget/diet insight heuristics
+│   ├── insight_service.py # Scoped spending insights by category
 │   ├── qa_service.py      # Q&A pipeline
 │   └── loader.py          # Read and flatten receipt JSON
 ├── requirements.txt       # Python dependencies
 ├── pytest.ini             # pytest config
 ├── tests/                 # pytest
-└── docs/                  # Analytics and Q&A docs
+└── docs/                  # Analytics, Q&A, and contributor docs
     ├── analytics-schema.md              # Time ranges, filters, dedup
     ├── analytics.md                     # End-to-end analytics guide
+    ├── contributing.md                  # Contributor and operator guide
     ├── question-answering.md            # Q&A pipeline, prompts, setup
     └── question-answering-test-matrix.md # Q&A scenarios + key facts
 ```
@@ -45,8 +47,6 @@ receipt-intelligence-api/
 ## Prerequisites
 
 - Python 3.11+
-- [GitHub CLI](https://cli.github.com/) (`gh`)
-- [Cursor](https://cursor.com/)
 - Sibling clone: `receipt-intelligence-n8n` with categorized JSON in `data/receipts/`
 
 ## Getting started
@@ -55,11 +55,10 @@ receipt-intelligence-api/
    ```
    receipt-intelligence-system/
    ├── receipt-intelligence-n8n/
-   └── receipt-intelligence-api/   ← open this in Cursor
+   └── receipt-intelligence-api/
    ```
 2. **Copy env:** `cp .env.example .env`
 3. **Set receipt data path** in `.env` (default points at sibling n8n `data/receipts/`)
-4. **Pick an issue** on the [Project board](https://github.com/users/RoxanaTapia/projects/3) → `/ship-issue #NN` (see [AGENTS.md](AGENTS.md))
 
 ### Local run
 
@@ -111,20 +110,4 @@ curl http://localhost:8000/health   # {"status":"ok"}
 | [docs/analytics-schema.md](docs/analytics-schema.md) | Analytics contract: time ranges, filters, response shapes, dedup |
 | [docs/question-answering.md](docs/question-answering.md) | Q&A pipeline: routing, narration, insights, setup, curl |
 | [docs/question-answering-test-matrix.md](docs/question-answering-test-matrix.md) | Q&A test matrix: sample questions, expected routing, key facts |
-| [AGENTS.md](AGENTS.md) | Cursor agent workflow |
-
-## Agent workflow
-
-One issue, one branch, one PR. Orchestrator runs `/verify` before opening a PR; you approve before merge.
-
-**Start here:** [AGENTS.md](AGENTS.md)
-
-## Shipped (Module 4)
-
-Module 4 is complete. Historical scope:
-
-| Area | Focus |
-|------|-------|
-| Bootstrap + loader | Cursor workflow, FastAPI scaffold, receipt loader |
-| Analytics | Query schemas, aggregation, summaries, REST, docs |
-| Q&A | Endpoint, routing, insights, test matrix + docs |
+| [docs/contributing.md](docs/contributing.md) | Contributor and operator guide |
