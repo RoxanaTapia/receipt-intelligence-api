@@ -93,7 +93,7 @@ Every aggregation response exposes:
 
 | Unit | Field | Meaning |
 |------|-------|---------|
-| Total spend | `total_spend` | Sum of included line-item `price` values (each `price` is the line total, matching upstream extraction) |
+| Total spend | `total_spend` | Sum of included line-item `price` values, to the nearest cent (each `price` is the line total, matching upstream extraction) |
 | Spend by category | `by_category[]` | Per-category `total_spend` and `line_item_count` |
 | Line-item count | `line_item_count` | Number of line items included |
 | Receipt count | `receipt_count` | Number of **deduplicated** logical receipts included |
