@@ -45,7 +45,9 @@ def test_resolve_explicit_range() -> None:
 
 def test_logical_key_ignores_category() -> None:
     loaded = load_receipts(AGG_FIXTURES)
-    older = next(r for r in loaded if r.path.name.endswith("aaaaaaaa.json") and "rewe" in r.path.name)
+    older = next(
+        r for r in loaded if r.path.name.endswith("aaaaaaaa.json") and "rewe" in r.path.name
+    )
     newer = next(r for r in loaded if r.path.name.endswith("bbbbbbbb.json"))
     assert logical_receipt_key(older.receipt) == logical_receipt_key(newer.receipt)
 

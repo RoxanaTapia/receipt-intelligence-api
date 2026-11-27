@@ -49,9 +49,7 @@ def test_format_period_label_presets() -> None:
 
 
 def test_format_period_label_calendar_month() -> None:
-    assert (
-        format_period_label(date(2024, 3, 1), date(2024, 3, 31)) == "March 2024"
-    )
+    assert format_period_label(date(2024, 3, 1), date(2024, 3, 31)) == "March 2024"
 
 
 def test_top_categories_ordered_by_spend() -> None:

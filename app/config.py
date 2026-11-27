@@ -1,7 +1,7 @@
 """Application configuration from environment variables."""
 
-from pathlib import Path
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 

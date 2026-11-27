@@ -59,10 +59,7 @@ def _snacks_share_of_grocery(
     grocery = food + snacks
     value = _share_pct(snacks, grocery)
     triggered = grocery > 0 and value > warn_pct
-    text = (
-        f"Snacks were {value:.1f}% of your grocery spend (food + snacks) "
-        f"{period_label}."
-    )
+    text = f"Snacks were {value:.1f}% of your grocery spend (food + snacks) {period_label}."
     if triggered:
         text += f" That's above the {warn_pct:g}% guideline."
     return Insight(
@@ -115,16 +112,12 @@ def _high_discretionary_share(
     total: float,
     warn_pct: float,
 ) -> Insight:
-    discretionary = (
-        _category_spend(spend, Category.SNACKS)
-        + _category_spend(spend, Category.DRINKS)
+    discretionary = _category_spend(spend, Category.SNACKS) + _category_spend(
+        spend, Category.DRINKS
     )
     value = _share_pct(discretionary, total)
     triggered = total > 0 and value > warn_pct
-    text = (
-        f"Snacks and drinks together were {value:.1f}% of your total spend "
-        f"{period_label}."
-    )
+    text = f"Snacks and drinks together were {value:.1f}% of your total spend {period_label}."
     if triggered:
         text += f" That's above the {warn_pct:g}% guideline."
     return Insight(

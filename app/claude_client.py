@@ -26,9 +26,7 @@ class AnthropicClaudeClient:
 
     def complete(self, *, system: str, user: str) -> str:
         if not self._api_key:
-            raise RuntimeError(
-                "ANTHROPIC_API_KEY is not set — add it to .env (see .env.example)"
-            )
+            raise RuntimeError("ANTHROPIC_API_KEY is not set — add it to .env (see .env.example)")
 
         import anthropic
 

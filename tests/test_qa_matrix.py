@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 from datetime import date
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -267,4 +268,3 @@ def test_matrix_l6_via_http() -> None:
     assert body["facts"]["aggregation"]["total_spend"] == pytest.approx(6.78)
     # Ensure response JSON is serializable (Claude facts path)
     json.dumps(body)
-

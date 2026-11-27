@@ -19,7 +19,7 @@ from app.analytics_models import (
     TimeRangePreset,
 )
 from app.loader import LoadedReceipt, load_receipts
-from app.models import Category, CategorizedReceipt
+from app.models import CategorizedReceipt, Category
 
 
 def resolve_time_range(time_range: AnalyticsTimeRange, as_of: date) -> tuple[date, date]:
@@ -44,9 +44,7 @@ def resolve_time_range(time_range: AnalyticsTimeRange, as_of: date) -> tuple[dat
 def logical_receipt_key(receipt: CategorizedReceipt) -> tuple:
     """Identity of one shopping trip — category excluded so re-labels still match."""
     items = tuple(
-        sorted(
-            (item.description, item.quantity, item.price) for item in receipt.line_items
-        )
+        sorted((item.description, item.quantity, item.price) for item in receipt.line_items)
     )
     return (receipt.date, receipt.merchant, items)
 

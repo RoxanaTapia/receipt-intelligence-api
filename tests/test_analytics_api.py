@@ -191,15 +191,15 @@ def test_openapi_includes_analytics_paths() -> None:
     assert "/analytics/summary" in paths
     assert "/analytics/receipts" in paths
 
-    spending_schema = paths["/analytics/spending"]["get"]["responses"]["200"][
-        "content"
-    ]["application/json"]["schema"]
+    spending_schema = paths["/analytics/spending"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
     # Prefer component ref; resolve name for AggregationResponse
     ref = spending_schema.get("$ref", "")
     assert "AggregationResponse" in ref or "AggregationResponse" in str(schema)
 
-    receipts_schema = paths["/analytics/receipts"]["get"]["responses"]["200"][
-        "content"
-    ]["application/json"]["schema"]
+    receipts_schema = paths["/analytics/receipts"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
     ref = receipts_schema.get("$ref", "")
     assert "ReceiptCoverageResponse" in ref or "ReceiptCoverageResponse" in str(schema)
