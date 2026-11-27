@@ -16,11 +16,15 @@ Those files are written by [receipt-intelligence-n8n](https://github.com/RoxanaT
 
 ```
 receipt-intelligence-api/
-├── AGENTS.md              # Notes for people changing this repo
-├── .cursor/               # Commands and rules for contributors
+├── AGENTS.md              # How a change happens, and where things are
+├── .cursor/rules/         # Short rules for agents
+├── .editorconfig          # Editor defaults
+├── .github/               # Issue template, pull request template, tests
 ├── Dockerfile             # Production image (uvicorn on :8000)
 ├── .dockerignore          # Lean build context for Docker
 ├── .env.example           # Local config template (incl. ANTHROPIC_API_KEY)
+├── LICENSE                # MIT license
+├── pyproject.toml         # Ruff settings
 ├── app/                   # FastAPI application
 │   ├── main.py            # Entrypoint
 │   ├── routers/           # REST routes (analytics + questions)
@@ -39,7 +43,7 @@ receipt-intelligence-api/
 └── docs/                  # Analytics, Q&A, and contributor docs
     ├── analytics-schema.md              # Time ranges, filters, dedup
     ├── analytics.md                     # End-to-end analytics guide
-    ├── contributing.md                  # Contributor and operator guide
+    ├── contributing.md                  # Notes for people changing the API
     ├── question-answering.md            # Q&A pipeline, prompts, setup
     └── question-answering-test-matrix.md # Q&A scenarios + key facts
 ```
@@ -87,6 +91,8 @@ Run tests:
 pytest
 ```
 
+GitHub runs these tests, and Ruff, on every pull request and on every push to main. The commands are in [AGENTS.md](AGENTS.md).
+
 ### Docker image
 
 Production-oriented image for Compose / VPS (no `--reload`). Default `RECEIPT_DATA_PATH` inside the container is `/data/receipts` — mount categorized JSON there (or override the env var).
@@ -110,4 +116,4 @@ curl http://localhost:8000/health   # {"status":"ok"}
 | [docs/analytics-schema.md](docs/analytics-schema.md) | Analytics contract: time ranges, filters, response shapes, dedup |
 | [docs/question-answering.md](docs/question-answering.md) | Q&A pipeline: routing, narration, insights, setup, curl |
 | [docs/question-answering-test-matrix.md](docs/question-answering-test-matrix.md) | Q&A test matrix: sample questions, expected routing, key facts |
-| [docs/contributing.md](docs/contributing.md) | Contributor and operator guide |
+| [docs/contributing.md](docs/contributing.md) | Notes for people changing the API |

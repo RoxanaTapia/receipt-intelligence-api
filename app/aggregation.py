@@ -19,7 +19,7 @@ from app.analytics_models import (
     TimeRangePreset,
 )
 from app.loader import LoadedReceipt, load_receipts
-from app.models import Category, CategorizedReceipt
+from app.models import CategorizedReceipt, Category
 
 
 def resolve_time_range(time_range: AnalyticsTimeRange, as_of: date) -> tuple[date, date]:
@@ -44,9 +44,7 @@ def resolve_time_range(time_range: AnalyticsTimeRange, as_of: date) -> tuple[dat
 def logical_receipt_key(receipt: CategorizedReceipt) -> tuple:
     """Identity of one shopping trip — category excluded so re-labels still match."""
     items = tuple(
-        sorted(
-            (item.description, item.quantity, item.price) for item in receipt.line_items
-        )
+        sorted((item.description, item.quantity, item.price) for item in receipt.line_items)
     )
     return (receipt.date, receipt.merchant, items)
 
@@ -96,7 +94,7 @@ def aggregate_spending(
     ]
 
     allowed = _allowed_categories(query.categories)
-    spend_by_category: dict[Category, float] = defaultdict(float)
+    spend_cents: dict[Category, int] = defaultdict(int)
     count_by_category: dict[Category, int] = defaultdict(int)
     line_item_count = 0
     receipt_count = 0
@@ -107,14 +105,14 @@ def aggregate_spending(
             continue
         receipt_count += 1
         for item in matched:
-            spend_by_category[item.category] += item.price
+            spend_cents[item.category] += _cents(item.price)
             count_by_category[item.category] += 1
             line_item_count += 1
 
     by_category = [
         CategorySpend(
             category=category,
-            total_spend=spend_by_category[category],
+            total_spend=_from_cents(spend_cents[category]),
             line_item_count=count_by_category[category],
         )
         for category in Category
@@ -125,12 +123,21 @@ def aggregate_spending(
         start_date=start_date,
         end_date=end_date,
         categories=query.categories,
-        total_spend=sum(row.total_spend for row in by_category),
+        total_spend=_from_cents(sum(spend_cents.values())),
         receipt_count=receipt_count,
         line_item_count=line_item_count,
         by_category=by_category,
         deduplication=dedup_meta,
     )
+
+
+def _cents(amount: float) -> int:
+    """Nearest cent. Whole cents add up the same way on every Python version."""
+    return int(round(amount * 100))
+
+
+def _from_cents(cents: int) -> float:
+    return cents / 100
 
 
 def _allowed_categories(categories: list[Category] | None) -> set[Category]:

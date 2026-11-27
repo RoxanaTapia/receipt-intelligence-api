@@ -112,9 +112,7 @@ def _build_facts(
                 fact="category_share",
                 value=pct,
                 unit="%",
-                text=(
-                    f"You spent {pct}% on {row.category.value} {period_label}."
-                ),
+                text=(f"You spent {pct}% on {row.category.value} {period_label}."),
             )
         )
     if top_categories:
@@ -125,10 +123,7 @@ def _build_facts(
                 fact="top_category",
                 value=top.category.value,
                 unit=None,
-                text=(
-                    f"Your top category {period_label} was {top.category.value} "
-                    f"({amount} EUR)."
-                ),
+                text=(f"Your top category {period_label} was {top.category.value} ({amount} EUR)."),
             )
         )
     return facts
@@ -157,8 +152,7 @@ def _delta_fact(delta: PeriodDelta, period_label: str) -> SummaryFact:
         value=delta.percent_change,
         unit="%",
         text=(
-            f"Total spend {period_label} changed by {delta.percent_change}% "
-            f"vs the previous period."
+            f"Total spend {period_label} changed by {delta.percent_change}% vs the previous period."
         ),
     )
 

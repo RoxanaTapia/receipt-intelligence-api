@@ -1,0 +1,14 @@
+---
+description: How a change is made in this repo
+alwaysApply: true
+---
+
+# Working in this repo
+
+- Read [AGENTS.md](../../AGENTS.md) before you edit.
+- Follow [How a change happens](../../AGENTS.md#how-a-change-happens). Use the issue and pull request templates in `.github/`.
+- One issue, one branch, one pull request. Stay inside the current issue.
+- Issue titles start with one emoji code, such as 🛠️ or 📄. Pull request titles are a plain sentence.
+- Roxana reviews and merges.
+- Do not change app behaviour unless the issue asks for that change.
+- Do not put secrets in a file, a log, or a pull request.

@@ -184,5 +184,5 @@ should match the logical set, not `ls | wc -l`.
 | [question-answering.md](question-answering.md) | Q&A routing, narration, insight thresholds |
 | [n8n data/README.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/README.md) | Filename pattern, hash, re-runs |
 | [n8n categorization.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization.md) | Upstream categorize → disk pipeline |
-| [AGENTS.md](../AGENTS.md) | Agent workflow for this repo |
+| [AGENTS.md](../AGENTS.md) | Project guide for this repo |
 | [README.md](../README.md) | Clone, env, quick start |

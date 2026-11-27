@@ -45,7 +45,9 @@ def test_resolve_explicit_range() -> None:
 
 def test_logical_key_ignores_category() -> None:
     loaded = load_receipts(AGG_FIXTURES)
-    older = next(r for r in loaded if r.path.name.endswith("aaaaaaaa.json") and "rewe" in r.path.name)
+    older = next(
+        r for r in loaded if r.path.name.endswith("aaaaaaaa.json") and "rewe" in r.path.name
+    )
     newer = next(r for r in loaded if r.path.name.endswith("bbbbbbbb.json"))
     assert logical_receipt_key(older.receipt) == logical_receipt_key(newer.receipt)
 
@@ -78,7 +80,11 @@ def test_aggregate_all_categories_in_range() -> None:
     assert by_category[Category.DRINKS].total_spend == 5.0 + 1.78
     assert by_category[Category.OTHER].total_spend == 0.3
     assert Category.OTHER in by_category  # from May 19; May 15 milk is food on winner
-    assert response.total_spend == sum(row.total_spend for row in response.by_category)
+    # The total is the sum of category cents. A binary float sum of those
+    # amounts is one step off on Python 3.11.
+    assert round(response.total_spend * 100) == sum(
+        round(row.total_spend * 100) for row in response.by_category
+    )
     assert response.deduplication.deduplicated_count == 1
 
 

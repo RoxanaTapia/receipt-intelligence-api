@@ -58,11 +58,7 @@ def question_mentions_time(question: str) -> bool:
         return True
     if any(re.search(rf"\b{month}\b", lowered) for month in _MONTH_NAMES):
         return True
-    return bool(
-        _ISO_DATE.search(lowered)
-        or _YEAR.search(lowered)
-        or _LAST_N_DAYS.search(lowered)
-    )
+    return bool(_ISO_DATE.search(lowered) or _YEAR.search(lowered) or _LAST_N_DAYS.search(lowered))
 
 
 def apply_undated_window(
@@ -87,7 +83,11 @@ def apply_undated_window(
     if request_start is not None and request_end is not None:
         start, end = request_start, request_end
         warning = DEFAULTED_TO_REQUEST_WINDOW
-    elif query.analytics.time_range.preset is not None and corpus_start is not None and corpus_end is not None:
+    elif (
+        query.analytics.time_range.preset is not None
+        and corpus_start is not None
+        and corpus_end is not None
+    ):
         start, end = corpus_start, corpus_end
         warning = DEFAULTED_TO_CORPUS_SPAN
     else:

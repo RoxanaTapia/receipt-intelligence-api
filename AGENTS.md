@@ -1,88 +1,79 @@
-# AGENTS.md — Receipt Intelligence API
+# Project guide
 
-How we use Cursor agents, rules, and commands in this repository.
+## What we're building
 
-## Project Vision
+This is the backend for the Receipt Intelligence demo
+([receipt-intelligence-demo](https://github.com/RoxanaTapia/receipt-intelligence-demo)).
+It reads categorized receipt JSON, totals spending, and answers plain-language
+questions about that spending.
 
-Supporting **FastAPI** backend for the Receipt Intelligence System: load categorized receipt JSON, compute spending analytics, and answer natural-language budget questions — grounded in real data.
+[receipt-intelligence-n8n](https://github.com/RoxanaTapia/receipt-intelligence-n8n)
+writes the categorized JSON. This API reads it from `RECEIPT_DATA_PATH`.
+The demo builds this API and shares that receipt folder.
 
-**Stack:** FastAPI · Pydantic · pytest · Claude (Q&A narration only)
+## How a change happens
 
-**Sibling repo:** [receipt-intelligence-n8n](https://github.com/RoxanaTapia/receipt-intelligence-n8n) writes categorized receipts to `data/receipts/`. This repo **reads** them via `RECEIPT_DATA_PATH`.
+1. **One issue.** One request, one piece of work. Use `.github/ISSUE_TEMPLATE.md`.
+   The title starts with one emoji code, such as 🛠️ or 📄.
+2. **One branch.** A separate copy of the project, with a plain descriptive name.
+3. **One pull request.** The title is a plain sentence. The description follows
+   `.github/pull_request_template.md`.
+4. **Automated tests.** GitHub runs the tests and Ruff on every pull request and
+   on every push to main.
+5. **Roxana reviews and merges.**
 
-## Project references
+## Where things are
 
-Agents use generic language; this table maps terms to **this repo**. Cross-repo docs link to n8n.
+| Path | What it is |
+|---|---|
+| [README.md](README.md) | What this API is, and how to run it |
+| [app/](app/) | The FastAPI application |
+| [app/main.py](app/main.py) | Entrypoint and health check |
+| [app/routers/](app/routers/) | Analytics and question routes |
+| [app/loader.py](app/loader.py) | Reads categorized receipt JSON |
+| [app/aggregation.py](app/aggregation.py) | Spending totals |
+| [app/qa_service.py](app/qa_service.py) | Answers a question from those totals |
+| [docs/analytics.md](docs/analytics.md) | Analytics guide |
+| [docs/analytics-schema.md](docs/analytics-schema.md) | Analytics request and response shapes |
+| [docs/question-answering.md](docs/question-answering.md) | How a question is answered |
+| [docs/question-answering-test-matrix.md](docs/question-answering-test-matrix.md) | Sample questions and expected routing |
+| [docs/contributing.md](docs/contributing.md) | Notes for people changing the API |
+| [tests/](tests/) | Automated tests and receipt fixtures |
+| [.github/workflows/tests.yml](.github/workflows/tests.yml) | Runs the tests and Ruff on GitHub |
+| [.cursor/rules/](.cursor/rules/) | Rules for agents working in this repo |
+| [pyproject.toml](pyproject.toml) | Ruff settings |
+| [requirements.txt](requirements.txt) | Python dependencies |
+| [LICENSE](LICENSE) | MIT license |
 
-| Term | Path |
-|------|------|
-| Categorization schema (upstream contract) | [n8n: categorization-schema.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/categorization-schema.md) |
-| Receipt data on disk | [n8n: data/README.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/README.md) |
-| Sample receipt JSON | [n8n: data/receipts/example.json](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/data/receipts/example.json) |
-| Claude prompt standards (Q&A) | [n8n: n8n-claude-standards.md](https://github.com/RoxanaTapia/receipt-intelligence-n8n/blob/main/docs/n8n-claude-standards.md) |
-| Analytics schemas | `docs/analytics-schema.md` |
-| Analytics guide | `docs/analytics.md` |
-| Q&A guide | `docs/question-answering.md` |
-| Q&A test matrix | `docs/question-answering-test-matrix.md` |
+## Tests
 
-## Current Focus
+From the repository root:
 
-- **Module 4 (Q&A):** complete — endpoint, routing, insights, test matrix + docs
-- **Analytics:** complete — schemas, aggregation, summaries, REST, docs
-- **Loader / bootstrap:** complete
-- **Next:** no open issues in this repo — pick new work from the [Project board](https://github.com/users/RoxanaTapia/projects/3), or a docs/agentic hygiene chore
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install ruff==0.17.6
+ruff check .
+ruff format --check .
+pytest
+```
 
-## Core Principles
+The tests use fixtures and stand-ins. They do not call a live API and do not
+need an API key.
 
-- Keep things simple, readable, and maintainable
-- Small, focused functions and changes
-- One issue → one branch → one PR
-- Prioritize clarity and long-term quality
+## For the agents
 
-## Agent Roster
+Do:
 
-| Role | Responsibility | Notes |
-|------|----------------|-------|
-| `milestone-orchestrator` | Coordinates shipping, branches, commits | Only agent allowed to commit |
-| `fastapi-engineer` | FastAPI routes, services, Pydantic models, loader | Primary implement specialist |
-| `claude-prompt-engineer` | Q&A and routing prompts (API-side Claude calls) | Consult for routing / narration / insight prompts |
-| `docs-writer` | Documentation draft and review | `/document` |
-| `verifier` | Quality checks before PR | `/verify` |
-| `software-engineering-professor` | Teaches issues and concepts | `/lecture-on-issue` |
+- Read this guide and `.cursor/rules/` before you edit.
+- Stay inside the current issue. One issue, one branch, one pull request.
+- Keep the change small. Leave app behaviour as it is unless the issue asks you to change it.
+- Run the tests and Ruff before the pull request is ready for Roxana.
 
-## Workflow
+Don't:
 
-1. Pick a GitHub issue on the [Project board](https://github.com/users/RoxanaTapia/projects/3).
-2. *(Optional)* `/lecture-on-issue #NN`
-3. `/ship-issue #NN`
-4. `/document` if docs deliverables → `/verify` → PR → human approves merge
-5. `/ship-complete #NN` after merge
-
-## Slash Commands
-
-| Command | Purpose |
-|---------|---------|
-| `/ship-issue` | Ship one GitHub issue end-to-end |
-| `/document` | Docs-writer review |
-| `/verify` | Acceptance criteria coverage before PR |
-| `/ship-complete` | Tick issue checkboxes after merge |
-| `/lecture-on-issue` | Learn before building |
-
-## Rules
-
-| Rule | Scope |
-|------|-------|
-| `.cursor/rules/documentation.mdc` | Markdown docs |
-| `.cursor/rules/elegant-minimal-python.mdc` | Python code |
-
-## Commit & PR Policy
-
-- Granular commits (ideally 1–4 per issue)
-- Only `milestone-orchestrator` creates commits
-- **PR titles must not include issue numbers** (avoid `(#11)`, `#11`, or `Closes #11` in the title). Put `Closes #NN` in the PR body.
-- PR body starts with a **Main contribution** paragraph
-- Human must approve before push or merge
-
-## Notes for Cursor
-
-Read this file at the start of a new agent chat. Open **this repo** as the workspace root for `/ship-issue`.
+- Don't put secrets in a file, a log, or a pull request.
+- Don't add a real API key. The tests must pass without one.
+- Don't weaken a test to make it pass.
+- Don't put agent roles, shipping routines, or deploy steps back into this guide.
