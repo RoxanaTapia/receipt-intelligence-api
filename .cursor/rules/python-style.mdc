@@ -1,0 +1,19 @@
+---
+description: Python style for this API
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python style
+
+Ruff formats and checks Python. Settings are in `pyproject.toml`: line length
+100, rules E, F, and I.
+
+- Prefer the simple change that solves the problem.
+- Keep each function small and named for what it does.
+- Use type hints on public functions.
+- Use `pathlib.Path`, f-strings, and `with` for files and other resources.
+- Add a short docstring when the name does not say why the function exists.
+- Comment only when the next person would otherwise miss something.
+- Formatting and import order do not change behaviour.
+- Before a pull request, run `ruff check .`, `ruff format --check .`, and `pytest`.

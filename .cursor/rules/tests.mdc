@@ -1,0 +1,12 @@
+---
+description: Automated tests and Ruff run before review
+alwaysApply: true
+---
+
+# Tests
+
+- Every change keeps the existing tests passing. Add a test when you add behaviour.
+- Tests must pass without a real API key. Use the fixtures and stand-ins already in `tests/`.
+- When a test fails, fix the project. Do not weaken a test to make it pass.
+- Before a pull request is ready, run the commands in [Tests](../../AGENTS.md#tests).
+- GitHub runs `pytest`, `ruff check .`, and `ruff format --check .` on every pull request and on every push to main.
